@@ -9,7 +9,7 @@
 % Requires Matpower, CVX and SeDuMi.
 %
 
-display('Check whether loadcase is commented')
+% display('Check whether loadcase is commented')
 %%%%%%%%%%%%   COMMENT OUT FOR LOOP
 % clear all
 % close all
@@ -18,7 +18,7 @@ display('Check whether loadcase is commented')
 % case_num = 'case9';
 %%%%%%%%%%%%
 
-
+display('\n');
 mpc = loadcase(case_num);
 n           = size(mpc.bus, 1);
 m           = size(mpc.branch, 1);

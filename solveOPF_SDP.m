@@ -18,7 +18,7 @@ display('Check whether loadcase is commented')
 % case_num = 'case9';
 %%%%%%%%%%%%
 
-
+display('\n');
 mpc = loadcase(case_num);
 n           = size(mpc.bus, 1);
 m           = size(mpc.branch, 1);
@@ -213,7 +213,7 @@ maxEigRatio = max(eig_lst(eig_lst ~= max_eig))/max_eig;;
 % get voltage values
 [vec, lamda] = eigs(W);
 eig_1 = lamda(1);
-vec_1 = vec(1, :)
+vec_1 = vec(1, :);
 volt = sqrt(eig_1) * vec_1;
 
 
