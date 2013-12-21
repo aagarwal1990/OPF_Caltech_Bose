@@ -1,0 +1,43 @@
+function [ Volt ] = get_Volt(from_list, to_list, num_verts, W)
+% Function takes in W matrix and edge list. Outputs list of  voltages 
+% for each node in network
+
+% Volt is a list of complex values of voltages for each node. Magnitude of
+% voltage of node i given by sqrt of magnitude of Wii. Angle given by 
+% theta_i = theta_j - angle btw. Wij where theta_j is known
+Volt = zeros(num_verts, 1);
+
+% list of thetas initialized to -1. theta for node 1 set to 0
+thetas = [];
+for node = 1:num_verts
+    thetas(node) = -1;
+end
+thetas(1) = 0;
+
+% Create an adjacency matrix of the spanning tree of power network
+adjacency_matrix = sparse(get_adj_matrix(from_list, to_list, num_verts));
+span_tree = graphminspantree(adjacency_matrix);
+span_tree_adj_matrix = span_tree + span_tree';
+
+
+% get order of traversing graph through a BFS of spanning tree adjMatrix
+order = graphtraverse(span_tree_adj_matrix, 1, 'Method', 'BFS');
+% list of nodes for which we do not know theta yet
+unchecked_nodes = 2:num_verts;
+
+for node = 1:length(order)
+    child_nodes = graphtraverse(h, node, 'depth', 1);
+    unchecked_child_nodes = intersect((child_nodes), (unchecked_nodes));
+    for c_node = 1:length(unchecked_child_nodes)
+        temp_node = unchecked_child_nodes(c_node);
+        thetas(temp_node) = thetas(node) + angle(W(node, temp_node));
+        unchecked_nodes(unchecked_nodes ~= temp_node);
+        % Add voltage to Volt vector
+        magnitude = sqrt(abs(W(temp_node, temp_node)));
+        angle = thetas(temp_node)
+        Volt(temp_node) = magnitude * exp(i * angle);
+    end
+end
+
+
+        
