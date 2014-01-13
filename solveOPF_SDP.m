@@ -186,14 +186,14 @@ cvx_begin
         Vsq >= WMin;
         Vsq <= WMax;
                     
-        % Line limits
-        for bb = 1:m
-            Pf(bb) == real(trace(Ff{bb} * W));
-            Pt(bb) == real(trace(Tt{bb} * W));
-        end
-        
-        Pf <= Fmax;
-        Pt <= Fmax;
+%         % Line limits
+%         for bb = 1:m
+%             Pf(bb) == real(trace(Ff{bb} * W));
+%             Pt(bb) == real(trace(Tt{bb} * W));
+%         end
+%         
+%         Pf <= Fmax;
+%         Pt <= Fmax;
         
         W == hermitian_semidefinite( n );
 cvx_end
@@ -213,9 +213,9 @@ maxEigRatio = max(eig_lst(eig_lst ~= max_eig))/max_eig;;
 % get voltage values
 [vec, lamda] = eigs(W);
 eig_1 = lamda(1);
-vec_1 = vec(1, :);
-volt = sqrt(eig_1) * vec_1;
-
+R = chol(W);
+% volt = sqrt(eig_1) * R(1, :);
+volt = R(1, :);
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Run Matpower's solver

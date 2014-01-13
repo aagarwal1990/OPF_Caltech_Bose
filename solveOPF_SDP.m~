@@ -9,11 +9,16 @@
 % Requires Matpower, CVX and SeDuMi.
 %
 
+display('Check whether loadcase is commented')
+%%%%%%%%%%%%   COMMENT OUT FOR LOOP
 clear all
 close all
 clc
 
 case_num = 'case9';
+%%%%%%%%%%%%
+
+display('\n');
 mpc = loadcase(case_num);
 n           = size(mpc.bus, 1);
 m           = size(mpc.branch, 1);
@@ -193,16 +198,23 @@ cvx_begin
         W == hermitian_semidefinite( n );
 cvx_end
 
+% get elapsed time
 toc
 elapsed_time = toc;
 
+% get objective value
 objective_value = sum(aux)*conditionObj;
+
+% get max eig ratio
 eig_lst = eig(W);
 max_eig = max(eig_lst);
 maxEigRatio = max(eig_lst(eig_lst ~= max_eig))/max_eig;;
+
+% get voltage values
 [vec, lamda] = eigs(W);
-eig_1 = 
-% volt = 
+eig_1 = lamda(1);
+R = chol(W);
+volt = sqrt(eig_1) * vec_1;
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
