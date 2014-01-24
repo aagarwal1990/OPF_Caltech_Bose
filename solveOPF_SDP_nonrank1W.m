@@ -18,7 +18,7 @@ display('Check whether loadcase is commented')
 % case_num = 'case9';
 %%%%%%%%%%%%
 
-
+display('\n');
 mpc = loadcase(case_num);
 n           = size(mpc.bus, 1);
 m           = size(mpc.branch, 1);
@@ -71,28 +71,30 @@ Fmax        = mpc.branch(:, 6) / mpc.baseMVA;
 conditionObj = 10 * mpc.baseMVA;
 
 costGen2    = zeros(n, 1);
-costGen1    = zeros(n, 1);
+costGen1    = ones(n, 1);
 costGen0    = zeros(n, 1);
 
-costGen2(genBuses) ...
-            = mpc.gencost(:, 5) * (mpc.baseMVA^2) / conditionObj;
-costGen1(genBuses) ...
-            = mpc.gencost(:, 6) * mpc.baseMVA / conditionObj;
-costGen0(genBuses) ...
-            = mpc.gencost(:, 7) / conditionObj;
+% costGen2(genBuses) ...
+%             = mpc.gencost(:, 5) * (mpc.baseMVA^2) / conditionObj;
+% costGen1(genBuses) ...
+%             = mpc.gencost(:, 6) * mpc.baseMVA / conditionObj;
+% costGen0(genBuses) ...
+%             = mpc.gencost(:, 7) / conditionObj;
         
 WMax        = mpc.bus(:, 12) .^ 2;
 WMin        = mpc.bus(:, 13) .^ 2;
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+
+
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Set up optimization variables
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-
-
 j = sqrt(-1);
+
 for bb = 1 : m
    if mpc.branch(bb, 3) == 0
        mpc.branch(bb, 3) = 10^(-4);           
@@ -115,30 +117,45 @@ JJ  = {};
 
 for k=1:n
     y_k         = e_mat(:,k) * (e_mat(:, k)') * Ybus;
-    Phi{k}      = sparse(ctranspose(y_k) + y_k)/2;
-    Psi{k}      = sparse(ctranspose(y_k) - y_k)/(2*j);
-    JJ{k}       = sparse(e_mat(:,k) * (e_mat(:, k)'));
+    Phi{k}      = (ctranspose(y_k) + y_k)/2;
+    Psi{k}      = (ctranspose(y_k) - y_k)/(2*j);
+    JJ{k}       = e_mat(:,k) * (e_mat(:, k)');
 end
 clear y_k
 
+Ff      = {};
+Tt      = {};
 
-% Get Maximal cliques for chordal extension
-% Get neighbours 
-% [neighbours, M] = get_chordal_matrix_chole_random(mpc.branch(:, 1), mpc.branch(:, 2), n, n);
-file_path_name = strcat('chordal_matrices/ch_mat_', case_num);
-display(strcat('-------Loading chordal matrices and max cliques from\t', file_path_name));
-load(file_path_name);
-M = M_ch;
-neighbours = nbrs;
+for bb = 1:m
 
-% Start Timer
+    eb      = zeros(m, 1);
+    eb(bb)  = 1;
+    
+    eff     = zeros(n, 1);
+    eff(mpc.branch(bb, 1)) ...
+            = 1;
+    
+    ett     = zeros(n, 1);
+    ett(mpc.branch(bb, 2)) ...
+            = 1;
+      
+    Ff{bb}  = ctranspose(Yf) * eb * (eff');
+    Ff{bb}  = (Ff{bb} + ctranspose(Ff{bb})) / 2;
+    Tt{bb}  = ctranspose(Yt) * eb * (ett');
+    Tt{bb}  = (Tt{bb} + ctranspose(Tt{bb})) / 2;
+
+end
+clear bb eb eff ett
+
+% start time
 tic
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% Run Chordal relaxation
+% Run SDP relaxation
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-display('--------- Chordal calculation ----------')
+
+display('--------- SDP calculation ----------')
 
 cvx_begin
     variables Pg(n) Qg(n) Pinj(n) Qinj(n) Vsq(n) aux(n); 
@@ -151,8 +168,6 @@ cvx_begin
         for kk = 1:n
             Pinj(kk) == real( trace( Phi{kk} * W ));
             Qinj(kk) == real( trace( Psi{kk} * W ));
-%             Pinj(kk) == real( sum(sum(Phi{kk}.*(W'))) );
-%             Qinj(kk) == real( sum(sum(Psi{kk}.*(W'))) );
             Vsq(kk)  == W(kk, kk);
             
             costGen2(kk) * Pg(kk)^2 ...
@@ -169,17 +184,21 @@ cvx_begin
         Qg <= QgMax;
         Qg >= QgMin;
         Vsq >= WMin;
-        Vsq <= WMax;        
-                
+        Vsq <= WMax;
+                    
+        % Line limits
+        for bb = 1:m
+            Pf(bb) == real(trace(Ff{bb} * W));
+            Pt(bb) == real(trace(Tt{bb} * W));
+        end
+        eps = 10/10000;
+        Pf(14) <= -(1.0+eps);
+        Pt(14) >= 1+eps;
+        
         Pf <= Fmax;
         Pt <= Fmax;
         
-        for i = 1:length(max_clique)
-            temp_clique = max_clique{i};
-            temp_matrix = W(temp_clique, temp_clique);
-            temp_matrix == hermitian_semidefinite( length(temp_clique) );
-        end
-         
+        W == hermitian_semidefinite( n );
 cvx_end
 
 % get elapsed time
@@ -187,33 +206,65 @@ toc
 elapsed_time = toc;
 
 % get objective value
-objective_value = sum(aux)*conditionObj
+objective_value = sum(aux)*conditionObj;
 
 % get max eig ratio
-maxEigRatio = 0;
-for i = 1:length(max_clique)
-        temp_clique = max_clique{i};
-        temp_matrix = W(temp_clique, temp_clique);
-        eig_lst = eigs(temp_matrix);
-        maxEigRatio = max(maxEigRatio, eig_lst(2) / eig_lst(1));
-end
+eig_lst = eig(W);
+max_eig = max(eig_lst);
+maxEigRatio = max(eig_lst(eig_lst ~= max_eig))/max_eig;;
 
 % get voltage values
-[volt, thetas] = get_Volt(mpc.branch(:, 1), mpc.branch(:, 2), n, W);
-
+[vec, lamda] = eigs(W);
+eig_1 = lamda(1);
+R = chol(W);
+% volt = sqrt(eig_1) * R(1, :);
+volt = R(1, :);
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Run Matpower's solver
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-% display('--------- MATPOWER optimization ----------')
-% opt = mpoption('OPF_FLOW_LIM', 1);
-% results = runopf(mpc, opt);
+% if run_matpower == 1
+%     display('--------- MATPOWER optimization ----------')
+%     opt = mpoption('OPF_FLOW_LIM', 1);
+%     results = runopf(mpc, opt);
 % 
-% obj = results.f;
-% display(strcat('Total cost = ', num2str(obj)));
+%     obj = results.f;
+%     display(strcat('Total cost = ', num2str(obj)));
+% end
+% uA = 7.5/100;
+% uB = 10/100;
+% uC = 20/100;
+% 20000*(5.05 + uA+uB+2*uC)
+% 
+% u = [uA, uB, uC]';
+% k = ones(3);
+% 
+% varA = (7/100)^2;
+% varB = (12/100)^2;
+% varC = (18/100)^2;
+% 
+% corelAB = 0.7;
+% corelCA = -0.5;
+% corelBC = -0.3;
+% 
+% covarAB = corelAB*sqrt(varA)*sqrt(varB);
+% covarBC = corelBC*sqrt(varC)*sqrt(varB);
+% covarCA = corelCA*sqrt(varC)*sqrt(varA);
+% 
+% tot_var = varA+varB+4*varC+2*covarAB+4*(covarCA+covarBC);
+% 20000*tot_var
+% sqrt(20000*tot_var)
+% 
+% covar_mat = [varA, covarAB, covarCA; covarAB, varB, covarBC; covarCA, covarBC, varC]
+% covar_mat2 = cat(2,covar_mat,[0,0,0]');
+% covar_mat2 = cat(1,covar_mat2,[0,0,0,0]);
 
 
+
+
+
+
+% % % % 
 % % % % if strcmp(cvx_status, 'Solved') ~= 1
 % % % %     display('Problems in optimization');
 % % % % end
@@ -239,17 +290,4 @@ end
 % % % %     lambda123 = lambdas(1:3);
 % % % % else
 % % % %     lambda123 = NaN;
-% % % % end
-
-% % % % Create list of neighbours for each node
-% % % % neighbours = {};
-% % % % for i = 1:n
-% % % %     neighbours{i} = {};
-% % % % end
-% % % % 
-% % % % for i = 1:length(mpc.branch(:, 1))
-% % % %     len_1 = length(neighbours{mpc.branch(i, 1)});
-% % % %     len_2 = length(neighbours{mpc.branch(i, 2)});
-% % % %     neighbours{mpc.branch(i, 1)}{len_1 + 1} = mpc.branch(i, 2);
-% % % %     neighbours{mpc.branch(i, 2)}{len_2 + 1} = mpc.branch(i, 1);
 % % % % end

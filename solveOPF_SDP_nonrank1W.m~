@@ -7,19 +7,19 @@
 % Author: Subhonmesh Bose.
 %
 % Requires Matpower, CVX and SeDuMi.
-
-
+%
 
 display('Check whether loadcase is commented')
-%%%%%%%%%%% COMMENT OUT FOR LOOP %%%%%%%%%%
+%%%%%%%%%%%%   COMMENT OUT FOR LOOP
 % clear all
 % close all
 % clc
 % 
-mpc = loadcase('case9');
+% case_num = 'case9';
+%%%%%%%%%%%%
 
-%%%%%%%%%%%%%%
-
+display('\n');
+mpc = loadcase(case_num);
 n           = size(mpc.bus, 1);
 m           = size(mpc.branch, 1);
 genBuses    = mpc.gen(:, 1);
@@ -71,20 +71,23 @@ Fmax        = mpc.branch(:, 6) / mpc.baseMVA;
 conditionObj = 10 * mpc.baseMVA;
 
 costGen2    = zeros(n, 1);
-costGen1    = zeros(n, 1);
+costGen1    = ones(n, 1);
 costGen0    = zeros(n, 1);
 
-costGen2(genBuses) ...
-            = mpc.gencost(:, 5) * (mpc.baseMVA^2) / conditionObj;
-costGen1(genBuses) ...
-            = mpc.gencost(:, 6) * mpc.baseMVA / conditionObj;
-costGen0(genBuses) ...
-            = mpc.gencost(:, 7) / conditionObj;
+% costGen2(genBuses) ...
+%             = mpc.gencost(:, 5) * (mpc.baseMVA^2) / conditionObj;
+% costGen1(genBuses) ...
+%             = mpc.gencost(:, 6) * mpc.baseMVA / conditionObj;
+% costGen0(genBuses) ...
+%             = mpc.gencost(:, 7) / conditionObj;
         
 WMax        = mpc.bus(:, 12) .^ 2;
 WMin        = mpc.bus(:, 13) .^ 2;
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Set up optimization variables
@@ -114,18 +117,45 @@ JJ  = {};
 
 for k=1:n
     y_k         = e_mat(:,k) * (e_mat(:, k)') * Ybus;
-    Phi{k}      = sparse(ctranspose(y_k) + y_k)/2;
-    Psi{k}      = sparse(ctranspose(y_k) - y_k)/(2*j);
-    JJ{k}       = sparse(e_mat(:,k) * (e_mat(:, k)'));
+    Phi{k}      = (ctranspose(y_k) + y_k)/2;
+    Psi{k}      = (ctranspose(y_k) - y_k)/(2*j);
+    JJ{k}       = e_mat(:,k) * (e_mat(:, k)');
 end
 clear y_k
 
+Ff      = {};
+Tt      = {};
+
+for bb = 1:m
+
+    eb      = zeros(m, 1);
+    eb(bb)  = 1;
+    
+    eff     = zeros(n, 1);
+    eff(mpc.branch(bb, 1)) ...
+            = 1;
+    
+    ett     = zeros(n, 1);
+    ett(mpc.branch(bb, 2)) ...
+            = 1;
+      
+    Ff{bb}  = ctranspose(Yf) * eb * (eff');
+    Ff{bb}  = (Ff{bb} + ctranspose(Ff{bb})) / 2;
+    Tt{bb}  = ctranspose(Yt) * eb * (ett');
+    Tt{bb}  = (Tt{bb} + ctranspose(Tt{bb})) / 2;
+
+end
+clear bb eb eff ett
+
+% start time
+tic
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% Run SOCP_Sparse relaxation
+% Run SDP relaxation
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 
-display('--------- SOCP_Sparse calculation ----------')
+display('--------- SDP calculation ----------')
 
 cvx_begin
     variables Pg(n) Qg(n) Pinj(n) Qinj(n) Vsq(n) aux(n); 
@@ -136,7 +166,6 @@ cvx_begin
         
         
         for kk = 1:n
-            var_1 = 0;
             Pinj(kk) == real( trace( Phi{kk} * W ));
             Qinj(kk) == real( trace( Psi{kk} * W ));
             Vsq(kk)  == W(kk, kk);
@@ -156,55 +185,79 @@ cvx_begin
         Qg >= QgMin;
         Vsq >= WMin;
         Vsq <= WMax;
-        
-%         % Line limits
-%         for bb = 1:m
-%             Pf(bb) == real(trace(Ff{bb} * W));
-%             Pt(bb) == real(trace(Tt{bb} * W));
-%         end
-%              
-%         Pf <= Fmax;
-%         Pt <= Fmax;
-
-        for i = 1:length(mpc.branch(:, 1))
-            fr = mpc.branch(i:i, 1);
-            to = mpc.branch(i:i, 2);
-            temp_matrix = [[W(fr, fr), W(fr, to)]', [W(to, fr), W(to, to)]'];
-            temp_matrix == hermitian_semidefinite( 2 );
+                    
+        % Line limits
+        for bb = 1:m
+            Pf(bb) == real(trace(Ff{bb} * W));
+            Pt(bb) == real(trace(Tt{bb} * W));
         end
-         
+        
+        Pf(14) < -2;
+        Pt(14) > 1.1;
+        
+        Pf <= Fmax;
+        Pt <= Fmax;
+        
+        W == hermitian_semidefinite( n );
 cvx_end
 
-display(strcat('Total cost = ', num2str(sum(aux)*conditionObj)));
-display(' '); display(' '); display(' ');
+% get elapsed time
+toc
+elapsed_time = toc;
 
-% display('Eigenvalue_1, Eigenvalue_2,       Eigenvalue_Ratio');
-% for i = 1:length(mpc.branch(:, 1))
-%     fr = mpc.branch(i:i, 1);
-%     to = mpc.branch(i:i, 2);
-%     mat = [[W(fr, fr), W(fr, to)]', [W(to, fr), W(to, to)]'];
-%     eig_lst = eigs(mat);
-%     disp([num2str(eig_lst(1)) blanks(10) num2str(eig_lst(2)) blanks(10) num2str(eig_lst(1)/eig_lst(2))]);
-% end
+% get objective value
+objective_value = sum(aux)*conditionObj;
 
-[volt, thetas] = get_Volt(mpc.branch(:, 1), mpc.branch(:, 2), n, W);
-xlswrite('chordal', maxEigRatio, case_num, 'A1');
-xlswrite('chordal', volt, case_num, 'B1');
-xlswrite('chordal', W, case_num, 'C1');
+% get max eig ratio
+eig_lst = eig(W);
+max_eig = max(eig_lst);
+maxEigRatio = max(eig_lst(eig_lst ~= max_eig))/max_eig;;
 
+% get voltage values
+[vec, lamda] = eigs(W);
+eig_1 = lamda(1);
+R = chol(W);
+% volt = sqrt(eig_1) * R(1, :);
+volt = R(1, :);
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Run Matpower's solver
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-% display('--------- MATPOWER optimization ----------')
-% opt = mpoption('OPF_FLOW_LIM', 1);
-% results = runopf(mpc, opt);
+% if run_matpower == 1
+%     display('--------- MATPOWER optimization ----------')
+%     opt = mpoption('OPF_FLOW_LIM', 1);
+%     results = runopf(mpc, opt);
 % 
-% obj = results.f;
-% display(strcat('Total cost = ', num2str(obj)));
-
-
+%     obj = results.f;
+%     display(strcat('Total cost = ', num2str(obj)));
+% end
+% uA = 7.5/100;
+% uB = 10/100;
+% uC = 20/100;
+% 20000*(5.05 + uA+uB+2*uC)
+% 
+% u = [uA, uB, uC]';
+% k = ones(3);
+% 
+% varA = (7/100)^2;
+% varB = (12/100)^2;
+% varC = (18/100)^2;
+% 
+% corelAB = 0.7;
+% corelCA = -0.5;
+% corelBC = -0.3;
+% 
+% covarAB = corelAB*sqrt(varA)*sqrt(varB);
+% covarBC = corelBC*sqrt(varC)*sqrt(varB);
+% covarCA = corelCA*sqrt(varC)*sqrt(varA);
+% 
+% tot_var = varA+varB+4*varC+2*covarAB+4*(covarCA+covarBC);
+% 20000*tot_var
+% sqrt(20000*tot_var)
+% 
+% covar_mat = [varA, covarAB, covarCA; covarAB, varB, covarBC; covarCA, covarBC, varC]
+% covar_mat2 = cat(2,covar_mat,[0,0,0]');
+% covar_mat2 = cat(1,covar_mat2,[0,0,0,0]);
 
 
 
