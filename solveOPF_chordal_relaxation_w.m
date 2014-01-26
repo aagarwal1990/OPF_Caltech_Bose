@@ -171,8 +171,14 @@ cvx_begin
         Vsq >= WMin;
         Vsq <= WMax;        
                 
-        Pf <= Fmax;
-        Pt <= Fmax;
+%         % Line limits
+%         for bb = 1:m
+%             Pf(bb) == real(trace(Ff{bb} * W));
+%             Pt(bb) == real(trace(Tt{bb} * W));
+%         end
+%              
+%         Pf <= Fmax;
+%         Pt <= Fmax;
         
         for i = 1:length(max_clique)
             temp_clique = max_clique{i};

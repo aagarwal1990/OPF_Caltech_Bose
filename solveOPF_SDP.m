@@ -11,11 +11,11 @@
 
 display('Check whether loadcase is commented')
 %%%%%%%%%%%%   COMMENT OUT FOR LOOP
-% clear all
-% close all
-% clc
-% 
-% case_num = 'case9';
+clear all
+close all
+clc
+
+case_num = 'case14';
 %%%%%%%%%%%%
 
 display('\n');
@@ -71,15 +71,15 @@ Fmax        = mpc.branch(:, 6) / mpc.baseMVA;
 conditionObj = 10 * mpc.baseMVA;
 
 costGen2    = zeros(n, 1);
-costGen1    = zeros(n, 1);
+costGen1    = ones(n, 1) * 3;
 costGen0    = zeros(n, 1);
 
-costGen2(genBuses) ...
-            = mpc.gencost(:, 5) * (mpc.baseMVA^2) / conditionObj;
-costGen1(genBuses) ...
-            = mpc.gencost(:, 6) * mpc.baseMVA / conditionObj;
-costGen0(genBuses) ...
-            = mpc.gencost(:, 7) / conditionObj;
+% costGen2(genBuses) ...
+%             = mpc.gencost(:, 5) * (mpc.baseMVA^2) / conditionObj;
+% costGen1(genBuses) ...
+%             = mpc.gencost(:, 6) * mpc.baseMVA / conditionObj;
+% costGen0(genBuses) ...
+%             = mpc.gencost(:, 7) / conditionObj;
         
 WMax        = mpc.bus(:, 12) .^ 2;
 WMin        = mpc.bus(:, 13) .^ 2;
@@ -186,14 +186,18 @@ cvx_begin
         Vsq >= WMin;
         Vsq <= WMax;
                     
-%         % Line limits
-%         for bb = 1:m
-%             Pf(bb) == real(trace(Ff{bb} * W));
-%             Pt(bb) == real(trace(Tt{bb} * W));
-%         end
-%         
-%         Pf <= Fmax;
-%         Pt <= Fmax;
+        % Line limits
+        for bb = 1:m
+            Pf(bb) == real(trace(Ff{bb} * W));
+            Pt(bb) == real(trace(Tt{bb} * W));
+        end
+
+        % Impose line limit on Branch (2,4)
+        Pf(14) <= -0.9995
+        Pf(14) <= -0.9995
+        % Impose line limit on Branch (2,4)
+        Pf(15) <= 0.5000
+        Pf(15) <= 0.5000
         
         W == hermitian_semidefinite( n );
 cvx_end
@@ -209,6 +213,7 @@ objective_value = sum(aux)*conditionObj;
 eig_lst = eig(W);
 max_eig = max(eig_lst);
 maxEigRatio = max(eig_lst(eig_lst ~= max_eig))/max_eig;;
+eigs(W)
 
 % get voltage values
 [vec, lamda] = eigs(W);
@@ -256,12 +261,6 @@ volt = R(1, :);
 % covar_mat2 = cat(2,covar_mat,[0,0,0]');
 % covar_mat2 = cat(1,covar_mat2,[0,0,0,0]);
 
-
-
-
-
-
-% % % % 
 % % % % if strcmp(cvx_status, 'Solved') ~= 1
 % % % %     display('Problems in optimization');
 % % % % end

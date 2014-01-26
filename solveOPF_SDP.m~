@@ -15,7 +15,7 @@ clear all
 close all
 clc
 
-case_num = 'case9';
+case_num = 'case14';
 %%%%%%%%%%%%
 
 display('\n');
@@ -192,9 +192,10 @@ cvx_begin
             Pt(bb) == real(trace(Tt{bb} * W));
         end
         
-        Pf <= Fmax;
-        Pt <= Fmax;
-        
+%         Pf <= Fmax;
+%         Pt <= Fmax;
+        Pf(1) <= 1.2;
+        Pt(1) <= 
         W == hermitian_semidefinite( n );
 cvx_end
 
@@ -214,8 +215,8 @@ maxEigRatio = max(eig_lst(eig_lst ~= max_eig))/max_eig;;
 [vec, lamda] = eigs(W);
 eig_1 = lamda(1);
 R = chol(W);
-volt = sqrt(eig_1) * vec_1;
-
+% volt = sqrt(eig_1) * R(1, :);
+volt = R(1, :);
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Run Matpower's solver
@@ -256,12 +257,6 @@ volt = sqrt(eig_1) * vec_1;
 % covar_mat2 = cat(2,covar_mat,[0,0,0]');
 % covar_mat2 = cat(1,covar_mat2,[0,0,0,0]);
 
-
-
-
-
-
-% % % % 
 % % % % if strcmp(cvx_status, 'Solved') ~= 1
 % % % %     display('Problems in optimization');
 % % % % end
