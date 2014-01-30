@@ -183,9 +183,9 @@ cvx_begin
         a : Pg <= PgMax;
         b : Pg >= PgMin;
         c : Qg <= QgMax;
-        d: Qg >= QgMin;
-        e: Vsq >= WMin;
-        f: Vsq <= WMax;
+        d : Qg >= QgMin;
+        e : Vsq <= WMax;
+        f : Vsq >= WMin;
                     
         % Line limits
         for bb = 1:m

@@ -166,12 +166,12 @@ for kk = 1:n
 end
 
 
-grad_cost = (2*n,1);
+grad_cost = zeros(2*n,1);
 for kk = 1:n
     grad_cost = grad_cost + 2*costGen1(kk)*(exp_Phi{kk}*exp_V_k);
 end
 
-jacobian_g = (6*n, 2*n);
+jacobian_g = zeros(6*n, 2*n);
 
 % adding determinant of Pg <= PgMax
 
@@ -183,11 +183,11 @@ for kk = 1:n
     jacobian_g(4*n+kk,:) = 2*exp_V_k';
     jacobian_g(5*n+kk,:) = -2*exp_V_k';
     
-grad_lambda = grad_cost + lambda_k'*jacobian_g;
+grad_lagrangian = grad_cost + lambda_k'*jacobian_g;
 
-hess_lambda = zeros(2*n,2*n);
+hess_lagrangian = zeros(2*n,2*n);
 for kk = 1:n
-    hess_lambda = hess_lamda + 2*exp_Phi{kk};
+    hess_lagrangian = hess_lagrangian + 2*costGen1(kk)*exp_Phi{kk};
 end
    
 
@@ -199,7 +199,7 @@ cvx_begin
     minimise obj;
     subject to
         
-        obj = grad_lambda'*(V-V_k) + 1/2*(V-V_k)'*hess_lambda*(V-V_k);
+        obj = grad_lagrangian'*(V-V_k) + 1/2*(V-V_k)'*hess_lagrangian*(V-V_k);
         
         
         for kk = 1:n
@@ -219,9 +219,9 @@ cvx_begin
         a : Pg <= PgMax;
         b : Pg >= PgMin;
         c : Qg <= QgMax;
-        d: Qg >= QgMin;
-        e: Vsq >= WMin;
-        f: Vsq <= WMax;
+        d : Qg >= QgMin;
+        e : Vsq >= WMin;
+        f : Vsq <= WMax;
                     
         % Line limits
         for bb = 1:m
