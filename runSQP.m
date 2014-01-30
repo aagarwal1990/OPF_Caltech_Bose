@@ -182,7 +182,9 @@ for kk = 1:n
     jacobian_g(3*n+kk,:) = -2*(exp_Psi{kk}*exp_V_k)';
     jacobian_g(4*n+kk,:) = 2*exp_V_k';
     jacobian_g(5*n+kk,:) = -2*exp_V_k';
+
     
+
 grad_lagrangian = grad_cost + lambda_k'*jacobian_g;
 
 hess_lagrangian = zeros(2*n,2*n);
@@ -192,18 +194,18 @@ end
    
 
 cvx_begin
-    variable V(2*n) obj;
+    variable exp_V(2*n) obj;
     variables Pg(n) Qg(n) Pinj(n) Qinj(n) Vsq(n) aux(n); 
     variables Pf(m) Pt(m);
     dual variables a b c d e f;
     minimise obj;
     subject to
         
-        obj = grad_lagrangian'*(V-V_k) + 1/2*(V-V_k)'*hess_lagrangian*(V-V_k);
+        obj = grad_lagrangian'*(exp_V-epx_V_k) + 1/2*(exp_V-exp_V_k)'*hess_lagrangian*(exp_V-exp_V_k);
         
         
         for kk = 1:n
-            Pinj(kk) == real( trace( Phi{kk} * W ));
+            Pinj(kk) == real( exp_V_k'*exp_Phi{kk} * exp_V_k );
             Qinj(kk) == real( trace( Psi{kk} * W ));
             Vsq(kk)  == W(kk, kk);
             
