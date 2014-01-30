@@ -160,7 +160,7 @@ display('--------- SDP calculation ----------')
 cvx_begin
     variables Pg(n) Qg(n) Pinj(n) Qinj(n) Vsq(n) aux(n); 
     variables Pf(m) Pt(m);
-    dual variables a b c;
+    dual variables a b c d e f;
     variable W(n, n) hermitian
     minimize sum(aux)
     subject to
@@ -183,9 +183,9 @@ cvx_begin
         a : Pg <= PgMax;
         b : Pg >= PgMin;
         c : Qg <= QgMax;
-        Qg >= QgMin;
-        Vsq >= WMin;
-        Vsq <= WMax;
+        d: Qg >= QgMin;
+        e: Vsq >= WMin;
+        f: Vsq <= WMax;
                     
         % Line limits
         for bb = 1:m

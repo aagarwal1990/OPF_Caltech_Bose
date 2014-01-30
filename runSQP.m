@@ -151,121 +151,55 @@ for bb = 1:m
 end
 clear bb eb eff ett
 
-%%%%%%%%%%%%%%% assuming input is V_k
+%%%%%%%%%%%%%%% for SQP %%%%%%%%%%%%%%%%%%%%%
 exp_V_k = cat(1,real(V_k), imag(V_k));
 exp_Phi = {};
+exp_Psi = {};
 for kk = 1:n
     top = cat(2, real(Phi{kk}), -imag(Phi{kk}));
     bottom = cat(2, imag(Phi{kk}), real(Phi{kk}));
     exp_Phi{kk} = cat(1, top, bottom);
+    
+    top = cat(2, real(Psi{kk}), -imag(Psi{kk}));
+    bottom = cat(2, imag(Psi{kk}), real(Psi{kk}));
+    exp_Psi{kk} = cat(1, top, bottom);
 end
 
-grad_cost = (1,n);
+
+grad_cost = (2*n,1);
 for kk = 1:n
     grad_cost = grad_cost + 2*costGen1(kk)*(exp_Phi{kk}*exp_V_k);
 end
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% new code to determine sj
-from_verts = mpc.branch(:,1);
-to_verts = mpc.branch(:,2);
 
-res = mpc.branch(:,3);
-rctn = mpc.branch(:,4);
+jacobian_g = (6*n, 2*n);
 
+% adding determinant of Pg <= PgMax
 
-Adj = sparse(n,n);
-Admittance = sparse(n,n)
-for ii = 1:m
-    jj = from_verts(ii);
-    kk = to_verts(ii);
-    Adj(jj, kk) = 1;
-    Adj(kk, jj) = 1;
+for kk = 1:n
+    jacobian_g(kk,:) = 2*(exp_Phi{kk}*exp_V_k)';
+    jacobian_g(n+kk,:) = -2*(exp_Phi{kk}*exp_V_k)';
+    jacobian_g(2*n+kk,:) = 2*(exp_Psi{kk}*exp_V_k)';
+    jacobian_g(3*n+kk,:) = -2*(exp_Psi{kk}*exp_V_k)';
+    jacobian_g(4*n+kk,:) = 2*exp_V_k';
+    jacobian_g(5*n+kk,:) = -2*exp_V_k';
     
-    y_jk = complex(res(ii), -rctn(ii))/sqrt(res(ii)^2 + rctn(ii)^2)
-    Admittance(jj, kk) = y_jk;
-    Admittance(kk, jj) = y_jk;
+grad_lambda = grad_cost + lambda_k'*jacobian_g;
+
+hess_lambda = zeros(2*n,2*n);
+for kk = 1:n
+    hess_lambda = hess_lamda + 2*exp_Phi{kk};
 end
+   
 
-% to ensure that diagonal entries are zero
-Adj(logical(eye(n)))=0;
-
-rAdmittance = real(Admittance);% real part of admittance matrix
-iAdmittance = imag(Admittance);% imaginary part of admittance matrix
-
-nbrs = cell(1,n);
-for jj = 1:n
-    nbrs{jj} = find(Adj(jj,:));
-end
-
-
-% Following is code for iterative step which takes as input V_k
-% iterative step to determine s for each iteration
-% assuming V_k (column vector) has been determined
-
-
-
-% % matrix containing jth row multiplied by (V_k)_j
-% A = Adj * diag(V_k);
-% B = ((temp-temp').*Admittance) * diag(V_k);
-% s = B(logical(eye(n))); % this a part of g(x_k) in the book chapter 4
-% 
-% num_ineq = 2*(n+m); % min max for voltages and branch powers
-% 
-% lambda = zeros(num_ineq, 1);
-
-
-
-
-% To determine the cost function which is dependent only on the real part
-% as is seen in the solveOPF cvx, since cost is function of Pg only
-
-s = zeros(n,1);
-
-for jj = 1:n
-    s(jj) = abs(V_k(jj))^2*sum(Admittance(:,jj)) - V_k(jj)*sum(Admittance(jj,:)*V_k);
-end
-Pinj = real(s);
-Qinj = imag(s);
-
-Vsq = abs(V_k).^2;
-rV_k = real(V_k);% real part of voltage vector
-iV_k = imag(V_k);% imaginary part of voltage vector
-% no we have the constant parts of the inequalities . Need to evaluate the linear parts
-% for that we use jacobian matrix in the various components
-
-% To determine the jacobian matrices
-jacobian_Pinj = sparse(2*n, n);
-jacobian_Qinj = sparse(2*n, n);
-for jj = 1:n
-    
-    jacobian_Pinj(2*jj-1,jj) = 2*rV_k(jj)*sum(rAdmittance(jj,:)) ...
-        + rAdmittance(jj,:)*rV_k ...
-        - iV_k(jj)*sum(iAdmittance(jj,:)) ...
-        + iAdmittance(jj,:)*iV_k ...
-        + iV_k(jj)*rAdmittance(JJ,:)*iV_k; % d /d real()
-    jacobian_Pinj(2*jj, jj) = -2*iV_k(jj)*rAdmittance(jj,:)*iV_k ...
-        + rV_k(jj)*iAdmittance(jj,:)*rV_k ...
-        - rV_k(jj)*iAdmittance(jj:1)*i
-    jacobian_Qinj
-    jacobian_Qinj
-    
-    nbrs_jj = nbrs{jj}
-    for ii = 1:size(nbrs_jj, 2)
-        jacobian_Pinj(2*jj-1, ii) = 
-        jacobian_Pinj(2*jj, ii) = 
-        jacobian_Qinj
-        jacobian_Qinj
-    end
-end
-
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%55
-% this is to be done multipe times
 cvx_begin
+    variable V(2*n) obj;
     variables Pg(n) Qg(n) Pinj(n) Qinj(n) Vsq(n) aux(n); 
     variables Pf(m) Pt(m);
-    variable W(n, n) hermitian
-    minimize sum(aux)
+    dual variables a b c d e f;
+    minimise obj;
     subject to
+        
+        obj = grad_lambda'*(V-V_k) + 1/2*(V-V_k)'*hess_lambda*(V-V_k);
         
         
         for kk = 1:n
@@ -282,30 +216,114 @@ cvx_begin
         Qinj == Qg - Qd;
     
         
-        Pg <= PgMax;
-        Pg >= PgMin;
-        Qg <= QgMax;
-        Qg >= QgMin;
-        Vsq >= WMin;
-        Vsq <= WMax;
-        
-%         % Line limits
-%         for bb = 1:m
-%             Pf(bb) == real(trace(Ff{bb} * W));
-%             Pt(bb) == real(trace(Tt{bb} * W));
-%         end
-%              
-%         Pf <= Fmax;
-%         Pt <= Fmax;
-
-        for i = 1:length(mpc.branch(:, 1))
-            fr = mpc.branch(i:i, 1);
-            to = mpc.branch(i:i, 2);
-            temp_matrix = [[W(fr, fr), W(fr, to)]', [W(to, fr), W(to, to)]'];
-            temp_matrix == hermitian_semidefinite( 2 );
+        a : Pg <= PgMax;
+        b : Pg >= PgMin;
+        c : Qg <= QgMax;
+        d: Qg >= QgMin;
+        e: Vsq >= WMin;
+        f: Vsq <= WMax;
+                    
+        % Line limits
+        for bb = 1:m
+            Pf(bb) == real(trace(Ff{bb} * W));
+            Pt(bb) == real(trace(Tt{bb} * W));
         end
-         
+        
 cvx_end
 
 end
 
+
+
+% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% new code to determine sj
+% from_verts = mpc.branch(:,1);
+% to_verts = mpc.branch(:,2);
+% 
+% res = mpc.branch(:,3);
+% rctn = mpc.branch(:,4);
+% 
+% 
+% Adj = sparse(n,n);
+% Admittance = sparse(n,n)
+% for ii = 1:m
+%     jj = from_verts(ii);
+%     kk = to_verts(ii);
+%     Adj(jj, kk) = 1;
+%     Adj(kk, jj) = 1;
+%     
+%     y_jk = complex(res(ii), -rctn(ii))/sqrt(res(ii)^2 + rctn(ii)^2)
+%     Admittance(jj, kk) = y_jk;
+%     Admittance(kk, jj) = y_jk;
+% end
+% 
+% % to ensure that diagonal entries are zero
+% Adj(logical(eye(n)))=0;
+% 
+% rAdmittance = real(Admittance);% real part of admittance matrix
+% iAdmittance = imag(Admittance);% imaginary part of admittance matrix
+% 
+% nbrs = cell(1,n);
+% for jj = 1:n
+%     nbrs{jj} = find(Adj(jj,:));
+% end
+% 
+% 
+% % Following is code for iterative step which takes as input V_k
+% % iterative step to determine s for each iteration
+% % assuming V_k (column vector) has been determined
+% 
+% 
+% 
+% % % matrix containing jth row multiplied by (V_k)_j
+% % A = Adj * diag(V_k);
+% % B = ((temp-temp').*Admittance) * diag(V_k);
+% % s = B(logical(eye(n))); % this a part of g(x_k) in the book chapter 4
+% % 
+% % num_ineq = 2*(n+m); % min max for voltages and branch powers
+% % 
+% % lambda = zeros(num_ineq, 1);
+% 
+% 
+% 
+% 
+% % To determine the cost function which is dependent only on the real part
+% % as is seen in the solveOPF cvx, since cost is function of Pg only
+% 
+% s = zeros(n,1);
+% 
+% for jj = 1:n
+%     s(jj) = abs(V_k(jj))^2*sum(Admittance(:,jj)) - V_k(jj)*sum(Admittance(jj,:)*V_k);
+% end
+% Pinj = real(s);
+% Qinj = imag(s);
+% 
+% Vsq = abs(V_k).^2;
+% rV_k = real(V_k);% real part of voltage vector
+% iV_k = imag(V_k);% imaginary part of voltage vector
+% % no we have the constant parts of the inequalities . Need to evaluate the linear parts
+% % for that we use jacobian matrix in the various components
+% 
+% % To determine the jacobian matrices
+% jacobian_Pinj = sparse(2*n, n);
+% jacobian_Qinj = sparse(2*n, n);
+% for jj = 1:n
+%     
+%     jacobian_Pinj(2*jj-1,jj) = 2*rV_k(jj)*sum(rAdmittance(jj,:)) ...
+%         + rAdmittance(jj,:)*rV_k ...
+%         - iV_k(jj)*sum(iAdmittance(jj,:)) ...
+%         + iAdmittance(jj,:)*iV_k ...
+%         + iV_k(jj)*rAdmittance(JJ,:)*iV_k; % d /d real()
+%     jacobian_Pinj(2*jj, jj) = -2*iV_k(jj)*rAdmittance(jj,:)*iV_k ...
+%         + rV_k(jj)*iAdmittance(jj,:)*rV_k ...
+%         - rV_k(jj)*iAdmittance(jj:1)*i
+%     jacobian_Qinj
+%     jacobian_Qinj
+%     
+%     nbrs_jj = nbrs{jj}
+%     for ii = 1:size(nbrs_jj, 2)
+%         jacobian_Pinj(2*jj-1, ii) = 
+%         jacobian_Pinj(2*jj, ii) = 
+%         jacobian_Qinj
+%         jacobian_Qinj
+%     end
+% end
