@@ -2,8 +2,28 @@ function [ V_fin ] = runSQP( V0, case_num )
 %UNTITLED Summary of this function goes here
 %   Detailed explanation goes here
 
-mpc = loadcase(case_num);
+% solveOPF.m
+%
+% Solves OPF through 2 methods:
+%   1. SDP relaxation
+%   2. Matpower's internal solver.
+%
+% Author: Subhonmesh Bose.
+%
+% Requires Matpower, CVX and SeDuMi.
+%
 
+display('Check whether loadcase is commented')
+%%%%%%%%%%%%   COMMENT OUT FOR LOOP
+clear all
+close all
+clc
+
+case_num = 'case14';
+%%%%%%%%%%%%
+
+display('\n');
+mpc = loadcase(case_num);
 n           = size(mpc.bus, 1);
 m           = size(mpc.branch, 1);
 genBuses    = mpc.gen(:, 1);
@@ -55,21 +75,95 @@ Fmax        = mpc.branch(:, 6) / mpc.baseMVA;
 conditionObj = 10 * mpc.baseMVA;
 
 costGen2    = zeros(n, 1);
-costGen1    = zeros(n, 1);
+costGen1    = ones(n, 1) * 3;
 costGen0    = zeros(n, 1);
 
-costGen2(genBuses) ...
-            = mpc.gencost(:, 5) * (mpc.baseMVA^2) / conditionObj;
-costGen1(genBuses) ...
-            = mpc.gencost(:, 6) * mpc.baseMVA / conditionObj;
-costGen0(genBuses) ...
-            = mpc.gencost(:, 7) / conditionObj;
+% costGen2(genBuses) ...
+%             = mpc.gencost(:, 5) * (mpc.baseMVA^2) / conditionObj;
+% costGen1(genBuses) ...
+%             = mpc.gencost(:, 6) * mpc.baseMVA / conditionObj;
+% costGen0(genBuses) ...
+%             = mpc.gencost(:, 7) / conditionObj;
         
 WMax        = mpc.bus(:, 12) .^ 2;
 WMin        = mpc.bus(:, 13) .^ 2;
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Set up optimization variables
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+j = sqrt(-1);
+
+for bb = 1 : m
+   if mpc.branch(bb, 3) == 0
+       mpc.branch(bb, 3) = 10^(-4);           
+   end                                    
+end
+clear bb
+
+[Ybus, Yf, Yt] ...
+            = makeYbus(mpc.baseMVA, mpc.bus, mpc.branch);
+
+        
+e_mat = eye(n);
+
+Phi = {};
+Psi = {};
+JJ  = {};
+
+% Cmatrices = {};
+% bScalars  = {};
+
+for k=1:n
+    y_k         = e_mat(:,k) * (e_mat(:, k)') * Ybus;
+    Phi{k}      = (ctranspose(y_k) + y_k)/2;
+    Psi{k}      = (ctranspose(y_k) - y_k)/(2*j);
+    JJ{k}       = e_mat(:,k) * (e_mat(:, k)');
+end
+clear y_k
+
+Ff      = {};
+Tt      = {};
+
+for bb = 1:m
+
+    eb      = zeros(m, 1);
+    eb(bb)  = 1;
+    
+    eff     = zeros(n, 1);
+    eff(mpc.branch(bb, 1)) ...
+            = 1;
+    
+    ett     = zeros(n, 1);
+    ett(mpc.branch(bb, 2)) ...
+            = 1;
+      
+    Ff{bb}  = ctranspose(Yf) * eb * (eff');
+    Ff{bb}  = (Ff{bb} + ctranspose(Ff{bb})) / 2;
+    Tt{bb}  = ctranspose(Yt) * eb * (ett');
+    Tt{bb}  = (Tt{bb} + ctranspose(Tt{bb})) / 2;
+
+end
+clear bb eb eff ett
+
+%%%%%%%%%%%%%%% assuming input is V_k
+exp_V_k = cat(1,real(V_k), imag(V_k));
+exp_Phi = {};
+for kk = 1:n
+    top = cat(2, real(Phi{kk}), -imag(Phi{kk}));
+    bottom = cat(2, imag(Phi{kk}), real(Phi{kk}));
+    exp_Phi{kk} = cat(1, top, bottom);
+end
+
+grad_cost = (1,n);
+for kk = 1:n
+    grad_cost = grad_cost + 2*costGen1(kk)*(exp_Phi{kk}*exp_V_k);
+end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% new code to determine sj
 from_verts = mpc.branch(:,1);
 to_verts = mpc.branch(:,2);

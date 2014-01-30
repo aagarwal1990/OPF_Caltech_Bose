@@ -71,15 +71,15 @@ Fmax        = mpc.branch(:, 6) / mpc.baseMVA;
 conditionObj = 10 * mpc.baseMVA;
 
 costGen2    = zeros(n, 1);
-costGen1    = zeros(n, 1);
+costGen1    = ones(n, 1) * 3;
 costGen0    = zeros(n, 1);
 
-costGen2(genBuses) ...
-            = mpc.gencost(:, 5) * (mpc.baseMVA^2) / conditionObj;
-costGen1(genBuses) ...
-            = mpc.gencost(:, 6) * mpc.baseMVA / conditionObj;
-costGen0(genBuses) ...
-            = mpc.gencost(:, 7) / conditionObj;
+% costGen2(genBuses) ...
+%             = mpc.gencost(:, 5) * (mpc.baseMVA^2) / conditionObj;
+% costGen1(genBuses) ...
+%             = mpc.gencost(:, 6) * mpc.baseMVA / conditionObj;
+% costGen0(genBuses) ...
+%             = mpc.gencost(:, 7) / conditionObj;
         
 WMax        = mpc.bus(:, 12) .^ 2;
 WMin        = mpc.bus(:, 13) .^ 2;
@@ -160,6 +160,7 @@ display('--------- SDP calculation ----------')
 cvx_begin
     variables Pg(n) Qg(n) Pinj(n) Qinj(n) Vsq(n) aux(n); 
     variables Pf(m) Pt(m);
+    dual variables a b c;
     variable W(n, n) hermitian
     minimize sum(aux)
     subject to
@@ -179,9 +180,9 @@ cvx_begin
         Qinj == Qg - Qd;
     
         
-        Pg <= PgMax;
-        Pg >= PgMin;
-        Qg <= QgMax;
+        a : Pg <= PgMax;
+        b : Pg >= PgMin;
+        c : Qg <= QgMax;
         Qg >= QgMin;
         Vsq >= WMin;
         Vsq <= WMax;
@@ -191,11 +192,14 @@ cvx_begin
             Pf(bb) == real(trace(Ff{bb} * W));
             Pt(bb) == real(trace(Tt{bb} * W));
         end
+
+        % Impose line limit on Branch (2,4)
+        Pf(14) <= -0.9995
+        Pt(14) <= 0.9995
+        % Impose line limit on Branch (2,4)
+        Pf(15) <= 0.5000
+        Pf(15) <= 0.5000
         
-%         Pf <= Fmax;
-%         Pt <= Fmax;
-        Pf(1) <= 1.2;
-        Pt(1) <= 
         W == hermitian_semidefinite( n );
 cvx_end
 
@@ -210,6 +214,7 @@ objective_value = sum(aux)*conditionObj;
 eig_lst = eig(W);
 max_eig = max(eig_lst);
 maxEigRatio = max(eig_lst(eig_lst ~= max_eig))/max_eig;;
+eigs(W)
 
 % get voltage values
 [vec, lamda] = eigs(W);

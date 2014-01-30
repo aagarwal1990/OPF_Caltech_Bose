@@ -160,6 +160,7 @@ display('--------- SDP calculation ----------')
 cvx_begin
     variables Pg(n) Qg(n) Pinj(n) Qinj(n) Vsq(n) aux(n); 
     variables Pf(m) Pt(m);
+    dual variables a b c;
     variable W(n, n) hermitian
     minimize sum(aux)
     subject to
@@ -179,9 +180,9 @@ cvx_begin
         Qinj == Qg - Qd;
     
         
-        Pg <= PgMax;
-        Pg >= PgMin;
-        Qg <= QgMax;
+        a : Pg <= PgMax;
+        b : Pg >= PgMin;
+        c : Qg <= QgMax;
         Qg >= QgMin;
         Vsq >= WMin;
         Vsq <= WMax;
@@ -194,10 +195,10 @@ cvx_begin
 
         % Impose line limit on Branch (2,4)
         Pf(14) <= -0.9995
-        Pf(14) <= -0.9995
+        Pt(14) >= 0.9995
         % Impose line limit on Branch (2,4)
         Pf(15) <= 0.5000
-        Pf(15) <= 0.5000
+%         Pf(15) <= 0.5000
         
         W == hermitian_semidefinite( n );
 cvx_end
