@@ -11,11 +11,11 @@
 
 display('Check whether loadcase is commented')
 %%%%%%%%%%%%   COMMENT OUT FOR LOOP
-% clear all
-% close all
-% clc
-% 
-% case_num = 'case9';
+clear all
+close all
+clc
+
+case_num = 'case14';
 %%%%%%%%%%%%
 
 display('\n');
@@ -191,14 +191,6 @@ cvx_begin
             Pf(bb) == real(trace(Ff{bb} * W));
             Pt(bb) == real(trace(Tt{bb} * W));
         end
-        
-        % Impose line limit on Branch (7,8)
-        Pf(14) <= -0.9995
-        Pt(14) >= 0.9995
-        % Impose line limit on Branch (7,9)
-        Pf(15) <= 0.5000
-        Pt(15) >= -0.5000
-
                 
         W == hermitian_semidefinite( n );
 cvx_end
@@ -220,7 +212,6 @@ eigs(W)
 [vec, lamda] = eigs(W);
 eig_1 = lamda(1);
 R = chol(W);
-% volt = sqrt(eig_1) * R(1, :);
 volt = R(1, :);
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -261,13 +252,6 @@ volt = R(1, :);
 % covar_mat = [varA, covarAB, covarCA; covarAB, varB, covarBC; covarCA, covarBC, varC]
 % covar_mat2 = cat(2,covar_mat,[0,0,0]');
 % covar_mat2 = cat(1,covar_mat2,[0,0,0,0]);
-
-
-
-
-
-
-% % % % 
 % % % % if strcmp(cvx_status, 'Solved') ~= 1
 % % % %     display('Problems in optimization');
 % % % % end

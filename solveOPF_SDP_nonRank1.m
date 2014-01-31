@@ -193,6 +193,14 @@ cvx_begin
             Pt(bb) == real(trace(Tt{bb} * W));
         end
         
+        % Impose line limit on Branch (7,8)
+        Pf(14) <= -0.9995
+        Pt(14) >= 0.9995
+        % Impose line limit on Branch (7,9)
+        Pf(15) <= 0.5000
+        Pt(15) >= -0.5000
+
+        
         W == hermitian_semidefinite( n );
 cvx_end
 
