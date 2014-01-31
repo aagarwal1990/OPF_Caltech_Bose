@@ -169,6 +169,8 @@ lamda_k = lamda0;
 exp_V_k = cat(1,real(V_k), imag(V_k));
 exp_Phi = {};
 exp_Psi = {};
+exp_Ff  = {};
+exp_Tt  = {};
 for kk = 1:n
     top = cat(2, real(Phi{kk}), -imag(Phi{kk}));
     bottom = cat(2, imag(Phi{kk}), real(Phi{kk}));
@@ -177,6 +179,14 @@ for kk = 1:n
     top = cat(2, real(Psi{kk}), -imag(Psi{kk}));
     bottom = cat(2, imag(Psi{kk}), real(Psi{kk}));
     exp_Psi{kk} = cat(1, top, bottom);
+    
+    top = cat(2, real(Ff{kk}), -imag(Ff{kk}));
+    bottom = cat(2, imag(Ff{kk}), real(Ff{kk}));
+    exp_Ff{kk} = cat(1, top, bottom);
+    
+    top = cat(2, real(Tt{kk}), -imag(Tt{kk}));
+    bottom = cat(2, imag(Tt{kk}), real(Tt{kk}));
+    exp_Tt{kk} = cat(1, top, bottom);
 end
 
 while iter_diff > 10^-4 do
@@ -212,18 +222,12 @@ while iter_diff > 10^-4 do
         minimise obj;
         subject to
 
-            obj = grad_lagrangian'*(exp_V-epx_V_k) + 1/2*(exp_V-exp_V_k)'*hess_lagrangian*(exp_V-exp_V_k);
-            
-            for i = 1:n
-                V(i) == exp_V(i) - exp_V(i + 1);
-            end
-            
-            W == V * V';
+            obj = grad_lagrangian'*(exp_V-exp_V_k) + 1/2*(exp_V-exp_V_k)'*hess_lagrangian*(exp_V-exp_V_k);
             
             for kk = 1:n
-                Pinj(kk) == real( exp_V_k'*exp_Phi{kk} * exp_V_k );
-                Qinj(kk) == real( trace( Psi{kk} * W ));
-                Vsq(kk)  == W(kk, kk);
+                Pinj(kk) == exp_V_k'* exp_Phi{kk} * exp_V_k ;
+                Qinj(kk) == exp_V_k'* exp_Psi{kk} * exp_V_k;
+                Vsq(kk)  == (exp_V_k(kk))^2 + (exp_V_k(kk + n))^2;
 
                 costGen2(kk) * Pg(kk)^2 ...
                     + costGen1(kk) * Pg(kk) ...
@@ -235,10 +239,11 @@ while iter_diff > 10^-4 do
             
             % Line limits
             for bb = 1:m
-                Pf(bb) == real(trace(Ff{bb} * W));
-                Pt(bb) == real(trace(Tt{bb} * W));
+                Pf(bb) == V' * Ff{bb} * V;
+                Pt(bb) == V' * Tt{bb} * V;
             end
             
+            % CHANGE TO LESS THAN 0
             lam1 : Pg  <= PgMax;
             lam2 : Pg  >= PgMin;
             lam3 : Qg  <= QgMax;
