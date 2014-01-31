@@ -13,7 +13,7 @@ display('Check whether loadcase is commented')
 %%%%%%%%%%%%   COMMENT OUT FOR LOOP
 clear all
 close all
-clc
+% clc
 
 case_num = 'case14';
 %%%%%%%%%%%%
@@ -221,8 +221,9 @@ eigs(W)
 [vec, lamda] = eigs(W);
 eig_1 = lamda(1);
 R = chol(W);
+% volt = sqrt(eig_1) * R(1, :);
 V0 = R(1, :);
-lamda0 = {lam1, lam2, lam3, lam4, lam5, lam6, lam7, lam8};
+lamda0 = [lam1, lam2, lam3, lam4, lam5, lam6, lam7, lam8];
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Run Matpower's solver

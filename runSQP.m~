@@ -155,12 +155,6 @@ clear bb eb eff ett
 % Run SQP 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-line_limits = ones(m, 1) * 100;
-% Impose line limit on Branch (7,8)
-line_limits(14) = -0.995;
-% Impose line limit on Branch (7,9)
-line_limits(15) = 0.5000;
-
 % Starting point for SQP
 V_k = V0;
 iter_diff = 100;
@@ -180,6 +174,9 @@ for kk = 1:n
 end
 
 while iter_diff > 10^-4 do
+    exp_V_k = exp_V;
+    lamda_k = 
+    
     grad_cost = zeros(2*n,1);
     for kk = 1:n
         grad_cost = grad_cost + 2*costGen1(kk)*(exp_Phi{kk}*exp_V_k);
@@ -190,8 +187,8 @@ while iter_diff > 10^-4 do
     % adding determinant of Pg <= PgMax
 
     for kk = 1:n
-        jacobian_g(kk,:)     = 2*(exp_Phi{kk}*exp_V_k)';
-        jacobian_g(n+kk,:)   = -2*(exp_Phi{kk}*exp_V_k)';
+        jacobian_g(kk,:) = 2*(exp_Phi{kk}*exp_V_k)';
+        jacobian_g(n+kk,:) = -2*(exp_Phi{kk}*exp_V_k)';
         jacobian_g(2*n+kk,:) = 2*(exp_Psi{kk}*exp_V_k)';
         jacobian_g(3*n+kk,:) = -2*(exp_Psi{kk}*exp_V_k)';
         jacobian_g(4*n+kk,:) = 2*exp_V_k';
@@ -208,7 +205,7 @@ while iter_diff > 10^-4 do
         variable exp_V(2*n) obj;
         variables Pg(n) Qg(n) Pinj(n) Qinj(n) Vsq(n) aux(n); 
         variables Pf(m) Pt(m);
-        dual variables lam1 lam2 lam3 lam4 lam5 lam6 lam7 lam8;
+        dual variables a b c d e f;
         minimise obj;
         subject to
 
@@ -228,14 +225,12 @@ while iter_diff > 10^-4 do
             Qinj == Qg - Qd;
 
 
-            lam1 : Pg  <= PgMax;
-            lam2 : Pg  >= PgMin;
-            lam3 : Qg  <= QgMax;
-            lam4 : Qg  >= QgMin;
-            lam5 : Vsq <= WMax;
-            lam6 : Vsq >= WMin;
-            lam7 : Pf  <= line_limits;
-            lam8 : Pt  >= -line_limits;
+            a : Pg <= PgMax;
+            b : Pg >= PgMin;
+            c : Qg <= QgMax;
+            d : Qg >= QgMin;
+            e : Vsq >= WMin;
+            f : Vsq <= WMax;
 
             % Line limits
             for bb = 1:m
@@ -246,8 +241,6 @@ while iter_diff > 10^-4 do
     cvx_end
     
     iter_diff = norm(exp_V - exp_V_k);
-    exp_V_k = exp_V;
-    lamda_k = {lam1, lam2, lam3, lam4, lam5, lam6, lam7, lam8};
 end
 
 
