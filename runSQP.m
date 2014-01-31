@@ -205,7 +205,7 @@ while iter_diff > 10^-4 do
     end
 
     cvx_begin
-        variable exp_V(2*n) obj;
+        variable exp_V(2*n) V(n) W(n, n) obj;
         variables Pg(n) Qg(n) Pinj(n) Qinj(n) Vsq(n) aux(n); 
         variables Pf(m) Pt(m);
         dual variables lam1 lam2 lam3 lam4 lam5 lam6 lam7 lam8;
@@ -213,7 +213,13 @@ while iter_diff > 10^-4 do
         subject to
 
             obj = grad_lagrangian'*(exp_V-epx_V_k) + 1/2*(exp_V-exp_V_k)'*hess_lagrangian*(exp_V-exp_V_k);
-
+            
+            for i = 1:n
+                V(i) == exp_V(i) - exp_V(i + 1);
+            end
+            
+            W == V * V';
+            
             for kk = 1:n
                 Pinj(kk) == real( exp_V_k'*exp_Phi{kk} * exp_V_k );
                 Qinj(kk) == real( trace( Psi{kk} * W ));
@@ -226,8 +232,13 @@ while iter_diff > 10^-4 do
 
             Pinj == Pg - Pd;
             Qinj == Qg - Qd;
-
-
+            
+            % Line limits
+            for bb = 1:m
+                Pf(bb) == real(trace(Ff{bb} * W));
+                Pt(bb) == real(trace(Tt{bb} * W));
+            end
+            
             lam1 : Pg  <= PgMax;
             lam2 : Pg  >= PgMin;
             lam3 : Qg  <= QgMax;
@@ -236,12 +247,6 @@ while iter_diff > 10^-4 do
             lam6 : Vsq >= WMin;
             lam7 : Pf  <= line_limits;
             lam8 : Pt  >= -line_limits;
-
-            % Line limits
-            for bb = 1:m
-                Pf(bb) == real(trace(Ff{bb} * W));
-                Pt(bb) == real(trace(Tt{bb} * W));
-            end
 
     cvx_end
     
