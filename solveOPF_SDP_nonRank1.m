@@ -11,11 +11,11 @@
 
 display('Check whether loadcase is commented')
 %%%%%%%%%%%%   COMMENT OUT FOR LOOP
-% clear all
-% close all
-% clc
-% 
-% case_num = 'case9';
+clear all
+close all
+clc
+
+case_num = 'case14';
 %%%%%%%%%%%%
 
 display('\n');
@@ -71,15 +71,15 @@ Fmax        = mpc.branch(:, 6) / mpc.baseMVA;
 conditionObj = 10 * mpc.baseMVA;
 
 costGen2    = zeros(n, 1);
-costGen1    = ones(n, 1);
+costGen1    = ones(n, 1) * 3;
 costGen0    = zeros(n, 1);
 
-costGen2(genBuses) ...
-            = mpc.gencost(:, 5) * (mpc.baseMVA^2) / conditionObj;
-costGen1(genBuses) ...
-            = mpc.gencost(:, 6) * mpc.baseMVA / conditionObj;
-costGen0(genBuses) ...
-            = mpc.gencost(:, 7) / conditionObj;
+% costGen2(genBuses) ...
+%             = mpc.gencost(:, 5) * (mpc.baseMVA^2) / conditionObj;
+% costGen1(genBuses) ...
+%             = mpc.gencost(:, 6) * mpc.baseMVA / conditionObj;
+% costGen0(genBuses) ...
+%             = mpc.gencost(:, 7) / conditionObj;
         
 WMax        = mpc.bus(:, 12) .^ 2;
 WMin        = mpc.bus(:, 13) .^ 2;
@@ -160,6 +160,7 @@ display('--------- SDP calculation ----------')
 cvx_begin
     variables Pg(n) Qg(n) Pinj(n) Qinj(n) Vsq(n) aux(n); 
     variables Pf(m) Pt(m);
+    dual variables a b c d e f;
     variable W(n, n) hermitian
     minimize sum(aux)
     subject to
@@ -179,12 +180,12 @@ cvx_begin
         Qinj == Qg - Qd;
     
         
-        Pg <= PgMax;
-        Pg >= PgMin;
-        Qg <= QgMax;
-        Qg >= QgMin;
-        Vsq >= WMin;
-        Vsq <= WMax;
+        a : Pg <= PgMax;
+        b : Pg >= PgMin;
+        c : Qg <= QgMax;
+        d : Qg >= QgMin;
+        e : Vsq <= WMax;
+        f : Vsq >= WMin;
                     
         % Line limits
         for bb = 1:m
@@ -192,14 +193,6 @@ cvx_begin
             Pt(bb) == real(trace(Tt{bb} * W));
         end
         
-        % Impose line limit on Branch (7,8)
-        Pf(14) <= -0.9995
-        Pt(14) >= 0.9995
-        % Impose line limit on Branch (7,9)
-        Pf(15) <= 0.5000
-        Pt(15) >= -0.5000
-
-                
         W == hermitian_semidefinite( n );
 cvx_end
 
@@ -262,12 +255,6 @@ volt = R(1, :);
 % covar_mat2 = cat(2,covar_mat,[0,0,0]');
 % covar_mat2 = cat(1,covar_mat2,[0,0,0,0]);
 
-
-
-
-
-
-% % % % 
 % % % % if strcmp(cvx_status, 'Solved') ~= 1
 % % % %     display('Problems in optimization');
 % % % % end
