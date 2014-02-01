@@ -243,15 +243,15 @@ while iter_diff > 10^-4 do
                 Pt(bb) == V' * Tt{bb} * V;
             end
             
-            % CHANGE TO LESS THAN 0
-            lam1 : Pg  <= PgMax;
-            lam2 : Pg  >= PgMin;
-            lam3 : Qg  <= QgMax;
-            lam4 : Qg  >= QgMin;
-            lam5 : Vsq <= WMax;
-            lam6 : Vsq >= WMin;
-            lam7 : Pf  <= line_limits;
-            lam8 : Pt  >= -line_limits;
+            % Contraints
+            lam1 : Pg - PgMax <= 0;
+            lam2 : PgMin - Pg <= 0;
+            lam3 : Qg - QgMax <= 0;
+            lam4 : QgMin - Qg <= 0;
+            lam5 : Vsq - WMax <= 0;
+            lam6 : WMin - Vsq <= 0;
+            lam7 : Pf - line_limits <= 0;
+            lam8 : -line_limits - Pt <= 0;
 
     cvx_end
     
