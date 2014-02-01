@@ -207,12 +207,12 @@ while and(iter_diff > 10^-4, count < 10)
         jacobian_g(6*n + m + kk,:) = -2*(exp_Tt{kk}*exp_V_k)';
     end
     
-    grad_lagrangian = grad_cost + lambda_k'*jacobian_g;
+    grad_lagrangian = grad_cost' + lambda_k'*jacobian_g;
 
     hess_lagrangian = zeros(2*n,2*n);
     
     for kk = 1:n
-        hess_lagrangian = hess_lagrangian + 2*costGen1(kk)*exp_Phi{kk} 
+        hess_lagrangian = hess_lagrangian + 2*costGen1(kk)*exp_Phi{kk}; 
     end
     
     for kk = 1:m
@@ -220,7 +220,7 @@ while and(iter_diff > 10^-4, count < 10)
     end
 
     cvx_begin
-        variable exp_V(2*n) V(n) W(n, n) obj;
+        variables exp_V(2*n) V(n) W(n, n) obj;
         variables Pg(n) Qg(n) Pinj(n) Qinj(n) Vsq(n) aux(n); 
         variables Pf(m) Pt(m);
         dual variables lam1 lam2 lam3 lam4 lam5 lam6 lam7 lam8;
