@@ -1,4 +1,4 @@
-function [ V_fin ] = runSQP( V0, lamda0, case_num )
+function [ objective_value, V_fin ] = runSQP( V0, lamda0, case_num )
 %UNTITLED Summary of this function goes here
 %   Detailed explanation goes here
 
@@ -11,18 +11,8 @@ function [ V_fin ] = runSQP( V0, lamda0, case_num )
 % Author: Subhonmesh Bose.
 %
 % Requires Matpower, CVX and SeDuMi.
-%
 
-display('Check whether loadcase is commented')
-%%%%%%%%%%%%   COMMENT OUT FOR LOOP
-clear all
-close all
-clc
 
-case_num = 'case14';
-%%%%%%%%%%%%
-
-display('\n');
 mpc = loadcase(case_num);
 n           = size(mpc.bus, 1);
 m           = size(mpc.branch, 1);
@@ -179,7 +169,9 @@ for kk = 1:n
     top = cat(2, real(Psi{kk}), -imag(Psi{kk}));
     bottom = cat(2, imag(Psi{kk}), real(Psi{kk}));
     exp_Psi{kk} = cat(1, top, bottom);
-    
+end
+
+for kk = 1:m
     top = cat(2, real(Ff{kk}), -imag(Ff{kk}));
     bottom = cat(2, imag(Ff{kk}), real(Ff{kk}));
     exp_Ff{kk} = cat(1, top, bottom);
@@ -195,7 +187,7 @@ while iter_diff > 10^-4 do
         grad_cost = grad_cost + 2*costGen1(kk)*(exp_Phi{kk}*exp_V_k);
     end
 
-    jacobian_g = zeros(8*n, 2*n);
+    jacobian_g = zeros(6*n + 2*m, 2*n);
 
     % adding determinant of Pg <= PgMax
 
@@ -206,16 +198,23 @@ while iter_diff > 10^-4 do
         jacobian_g(3*n+kk,:) = -2*(exp_Psi{kk}*exp_V_k)';
         jacobian_g(4*n+kk,:) = 2*exp_V_k';
         jacobian_g(5*n+kk,:) = -2*exp_V_k';
-        jacobian_g(6*n+kk,:) = 2*(exp_Ff{kk}*exp_V_k)';
-        jacobian_g(7*n+kk,:) = -2*(exp_Ff{kk}*exp_V_k)';
     end
     
-    for i = 1:8
+    for kk = 1:m
+        jacobian_g(6*n+kk,:) = 2*(exp_Ff{kk}*exp_V_k)';
+        jacobian_g(6*n + m + kk,:) = -2*(exp_Tt{kk}*exp_V_k)';
+    end
+    
     grad_lagrangian = grad_cost + lambda_k'*jacobian_g;
 
     hess_lagrangian = zeros(2*n,2*n);
+    
     for kk = 1:n
-        hess_lagrangian = hess_lagrangian + 2*costGen1(kk)*exp_Phi{kk};
+        hess_lagrangian = hess_lagrangian + 2*costGen1(kk)*exp_Phi{kk} 
+    end
+    
+    for kk = 1:m
+        hess_lagrangian = hess_lagrangian + 2*(exp_Ff{kk} - exp_Tt{kk});
     end
 
     cvx_begin
@@ -232,10 +231,6 @@ while iter_diff > 10^-4 do
                 Pinj(kk) == exp_V_k'* exp_Phi{kk} * exp_V_k ;
                 Qinj(kk) == exp_V_k'* exp_Psi{kk} * exp_V_k;
                 Vsq(kk)  == (exp_V_k(kk))^2 + (exp_V_k(kk + n))^2;
-
-                costGen2(kk) * Pg(kk)^2 ...
-                    + costGen1(kk) * Pg(kk) ...
-                    + costGen0(kk) <= aux(kk);
             end
 
             Pinj == Pg - Pd;
@@ -261,8 +256,28 @@ while iter_diff > 10^-4 do
     
     iter_diff = norm(exp_V - exp_V_k);
     exp_V_k = exp_V;
-    lamda_k = {lam1, lam2, lam3, lam4, lam5, lam6, lam7, lam8};
+    lamda_temp = [lam1', lam2', lam3', lam4', lam5', lam6', lam7', lam8'];
+    for i = 1:6
+        index = n * i;
+        lamda_k(index - n + 1 : index, 1) = lamda_temp(i);
+    end
+
+    for i = 7:8
+        index = m * i;
+        lamda_k(index - m + 1 : index, 1) = lamda_temp(i);
+    end
 end
+
+objective_value = zeros(n, 1);
+for kk = 1:n
+   objective_value(kk) = costGen2(kk) * Pg(kk)^2 ...
+        + costGen1(kk) * Pg(kk) ...
+        + costGen0(kk);
+end
+
+V_fin = exp_V_k;
+end
+
 
 
 

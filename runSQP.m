@@ -1,4 +1,4 @@
-function [ V_fin ] = runSQP( V0, lamda0, case_num )
+function [ objective_value, V_fin ] = runSQP( V0, lamda0, case_num )
 %UNTITLED Summary of this function goes here
 %   Detailed explanation goes here
 
@@ -11,18 +11,8 @@ function [ V_fin ] = runSQP( V0, lamda0, case_num )
 % Author: Subhonmesh Bose.
 %
 % Requires Matpower, CVX and SeDuMi.
-%
 
-display('Check whether loadcase is commented')
-%%%%%%%%%%%%   COMMENT OUT FOR LOOP
-clear all
-close all
-clc
 
-case_num = 'case14';
-%%%%%%%%%%%%
-
-display('\n');
 mpc = loadcase(case_num);
 n           = size(mpc.bus, 1);
 m           = size(mpc.branch, 1);
@@ -165,7 +155,7 @@ line_limits(15) = 0.5000;
 V_k = V0;
 iter_diff = 100;
 lamda_k = lamda0;
-
+count = 0
 exp_V_k = cat(1,real(V_k), imag(V_k));
 exp_Phi = {};
 exp_Psi = {};
@@ -191,7 +181,8 @@ for kk = 1:m
     exp_Tt{kk} = cat(1, top, bottom);
 end
 
-while iter_diff > 10^-4 do
+while and(iter_diff > 10^-4, count < 10)
+    count = count + 1
     grad_cost = zeros(2*n,1);
     for kk = 1:n
         grad_cost = grad_cost + 2*costGen1(kk)*(exp_Phi{kk}*exp_V_k);
@@ -218,8 +209,13 @@ while iter_diff > 10^-4 do
     grad_lagrangian = grad_cost + lambda_k'*jacobian_g;
 
     hess_lagrangian = zeros(2*n,2*n);
+    
     for kk = 1:n
-        hess_lagrangian = hess_lagrangian + 2*costGen1(kk)*exp_Phi{kk};
+        hess_lagrangian = hess_lagrangian + 2*costGen1(kk)*exp_Phi{kk} 
+    end
+    
+    for kk = 1:m
+        hess_lagrangian = hess_lagrangian + 2*(exp_Ff{kk} - exp_Tt{kk});
     end
 
     cvx_begin
@@ -236,10 +232,6 @@ while iter_diff > 10^-4 do
                 Pinj(kk) == exp_V_k'* exp_Phi{kk} * exp_V_k ;
                 Qinj(kk) == exp_V_k'* exp_Psi{kk} * exp_V_k;
                 Vsq(kk)  == (exp_V_k(kk))^2 + (exp_V_k(kk + n))^2;
-
-                costGen2(kk) * Pg(kk)^2 ...
-                    + costGen1(kk) * Pg(kk) ...
-                    + costGen0(kk) <= aux(kk);
             end
 
             Pinj == Pg - Pd;
@@ -276,6 +268,17 @@ while iter_diff > 10^-4 do
         lamda_k(index - m + 1 : index, 1) = lamda_temp(i);
     end
 end
+
+objective_value = zeros(n, 1);
+for kk = 1:n
+   objective_value(kk) = costGen2(kk) * Pg(kk)^2 ...
+        + costGen1(kk) * Pg(kk) ...
+        + costGen0(kk);
+end
+V_fin = complex(exp_V_k(1:n), exp_V_k(n+1:2*n));
+objective_value = sum(objective_value)*conditionObj;
+end
+
 
 
 

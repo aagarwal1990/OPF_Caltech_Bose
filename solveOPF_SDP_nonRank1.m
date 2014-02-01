@@ -236,7 +236,9 @@ for i = 7:8
     lamda0(index - m + 1 : index, 1) = lamda_temp(i);
 end
 
-
+[objective_value, V_fin]  = runSQP( V0, lamda0, case_num );
+objective_value
+V_fin
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Run Matpower's solver
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
