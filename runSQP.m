@@ -179,7 +179,9 @@ for kk = 1:n
     top = cat(2, real(Psi{kk}), -imag(Psi{kk}));
     bottom = cat(2, imag(Psi{kk}), real(Psi{kk}));
     exp_Psi{kk} = cat(1, top, bottom);
-    
+end
+
+for kk = 1:m
     top = cat(2, real(Ff{kk}), -imag(Ff{kk}));
     bottom = cat(2, imag(Ff{kk}), real(Ff{kk}));
     exp_Ff{kk} = cat(1, top, bottom);
@@ -195,7 +197,7 @@ while iter_diff > 10^-4 do
         grad_cost = grad_cost + 2*costGen1(kk)*(exp_Phi{kk}*exp_V_k);
     end
 
-    jacobian_g = zeros(6*n, 2*n);
+    jacobian_g = zeros(6*n + 2*m, 2*n);
 
     % adding determinant of Pg <= PgMax
 
@@ -207,6 +209,12 @@ while iter_diff > 10^-4 do
         jacobian_g(4*n+kk,:) = 2*exp_V_k';
         jacobian_g(5*n+kk,:) = -2*exp_V_k';
     end
+    
+    for kk = 1:m
+        jacobian_g(6*n+kk,:) = 2*(exp_Ff{kk}*exp_V_k)';
+        jacobian_g(6*n + m + kk,:) = -2*(exp_Tt{kk}*exp_V_k)';
+    end
+    
     grad_lagrangian = grad_cost + lambda_k'*jacobian_g;
 
     hess_lagrangian = zeros(2*n,2*n);
@@ -257,7 +265,16 @@ while iter_diff > 10^-4 do
     
     iter_diff = norm(exp_V - exp_V_k);
     exp_V_k = exp_V;
-    lamda_k = {lam1, lam2, lam3, lam4, lam5, lam6, lam7, lam8};
+    lamda_temp = [lam1', lam2', lam3', lam4', lam5', lam6', lam7', lam8'];
+    for i = 1:6
+        index = n * i;
+        lamda_k(index - n + 1 : index, 1) = lamda_temp(i);
+    end
+
+    for i = 7:8
+        index = m * i;
+        lamda_k(index - m + 1 : index, 1) = lamda_temp(i);
+    end
 end
 
 

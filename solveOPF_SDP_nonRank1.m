@@ -223,7 +223,19 @@ eigs(W)
 eig_1 = lamda(1);
 R = chol(W);
 V0 = R(1, :);
-lamda0 = {lam1, lam2, lam3, lam4, lam5, lam6, lam7, lam8};
+lamda0 = zeros(6*n + 2*m, 1);
+
+lamda_temp = [lam1', lam2', lam3', lam4', lam5', lam6', lam7', lam8'];
+for i = 1:6
+    index = n * i;
+    lamda0(index - n + 1 : index, 1) = lamda_temp(i);
+end
+
+for i = 7:8
+    index = m * i;
+    lamda0(index - m + 1 : index, 1) = lamda_temp(i);
+end
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Run Matpower's solver

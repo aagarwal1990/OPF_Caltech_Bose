@@ -195,7 +195,7 @@ while iter_diff > 10^-4 do
         grad_cost = grad_cost + 2*costGen1(kk)*(exp_Phi{kk}*exp_V_k);
     end
 
-    jacobian_g = zeros(6*n, 2*n);
+    jacobian_g = zeros(8*n, 2*n);
 
     % adding determinant of Pg <= PgMax
 
@@ -206,7 +206,11 @@ while iter_diff > 10^-4 do
         jacobian_g(3*n+kk,:) = -2*(exp_Psi{kk}*exp_V_k)';
         jacobian_g(4*n+kk,:) = 2*exp_V_k';
         jacobian_g(5*n+kk,:) = -2*exp_V_k';
+        jacobian_g(6*n+kk,:) = 2*(exp_Ff{kk}*exp_V_k)';
+        jacobian_g(7*n+kk,:) = -2*(exp_Ff{kk}*exp_V_k)';
     end
+    
+    for i = 1:8
     grad_lagrangian = grad_cost + lambda_k'*jacobian_g;
 
     hess_lagrangian = zeros(2*n,2*n);
@@ -222,7 +226,7 @@ while iter_diff > 10^-4 do
         minimise obj;
         subject to
 
-            obj = grad_lagrangian'*(exp_V-exp_V_k) + 1/2*(exp_V-exp_V_k)'*hess_lagrangian*(exp_V-exp_V_k);
+            obj = grad_lagrangian'* (exp_V-exp_V_k) + 1/2 * (exp_V-exp_V_k)'* hess_lagrangian * (exp_V-exp_V_k);
             
             for kk = 1:n
                 Pinj(kk) == exp_V_k'* exp_Phi{kk} * exp_V_k ;
@@ -239,11 +243,11 @@ while iter_diff > 10^-4 do
             
             % Line limits
             for bb = 1:m
-                Pf(bb) == V' * Ff{bb} * V;
-                Pt(bb) == V' * Tt{bb} * V;
+                Pf(bb) == exp_V_k' * exp_Ff{bb} * exp_V_k;
+                Pt(bb) == exp_V_k' * exp_Tt{bb} * exp_V_k;
             end
             
-            % Contrain
+            % Contraints
             lam1 : Pg - PgMax <= 0;
             lam2 : PgMin - Pg <= 0;
             lam3 : Qg - QgMax <= 0;
