@@ -155,7 +155,6 @@ line_limits(15) = 0.5000;
 V_k = V0';
 iter_diff = 100;
 lambda_k = lamda0;
-length(lambda_k)
 count = 0;
 exp_V_k = cat(1,real(V_k), imag(V_k));
 exp_Phi = {};
@@ -245,16 +244,22 @@ while and(iter_diff > 10^-4, count < 10)
             end
             
             % Contraints
-            lam1 : Pg - PgMax <= 0;
-            lam2 : PgMin - Pg <= 0;
-            lam3 : Qg - QgMax <= 0;
-            lam4 : QgMin - Qg <= 0;
-            lam5 : Vsq - WMax <= 0;
-            lam6 : WMin - Vsq <= 0;
-            lam7 : Pf - line_limits <= 0;
-            lam8 : -line_limits - Pt <= 0;
+            lam1 : Pg - PgMax + jacobian_g(1:n, :)*(exp_V-exp_V_k) <= 0;
+            lam2 : PgMin - Pg + jacobian_g(n+1:2*n, :)*(exp_V-exp_V_k)<= 0;
+            lam3 : Qg - QgMax + jacobian_g(2*n+1:3*n, :)*(exp_V-exp_V_k)<= 0;
+            lam4 : QgMin - Qg + jacobian_g(3*n+1:4*n, :)*(exp_V-exp_V_k)<= 0;
+            lam5 : Vsq - WMax + jacobian_g(4*n+1:5*n, :)*(exp_V-exp_V_k)<= 0;
+            lam6 : WMin - Vsq + jacobian_g(5*n+1:6*n, :)*(exp_V-exp_V_k)<= 0;
+            lam7 : Pf - line_limits + ...
+                    jacobian_g(6*n+1:6*n+m, :)*(exp_V-exp_V_k)<= 0;
+            lam8 : - line_limits - Pt + ...
+                    jacobian_g(6*n+1+m:6*n+2*m, :)*(exp_V-exp_V_k)<= 0;
 
     cvx_end
+    
+    for kk = 1:m
+        jacobian_g(6*n+kk,:) = 2*(exp_Ff{kk}*exp_V_k)';
+        jacobian_g(6*n + m + kk,:) = -2*(exp_Tt{kk}*exp_V_k)';
     
     iter_diff = norm(exp_V - exp_V_k);
     exp_V_k = exp_V;
