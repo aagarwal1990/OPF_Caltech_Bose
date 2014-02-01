@@ -152,10 +152,11 @@ line_limits(14) = -0.995;
 line_limits(15) = 0.5000;
 
 % Starting point for SQP
-V_k = V0;
+V_k = V0';
 iter_diff = 100;
-lamda_k = lamda0;
-
+lambda_k = lamda0;
+length(lambda_k)
+count = 0;
 exp_V_k = cat(1,real(V_k), imag(V_k));
 exp_Phi = {};
 exp_Psi = {};
@@ -181,7 +182,8 @@ for kk = 1:m
     exp_Tt{kk} = cat(1, top, bottom);
 end
 
-while iter_diff > 10^-4 do
+while and(iter_diff > 10^-4, count < 10)
+    count = count + 1
     grad_cost = zeros(2*n,1);
     for kk = 1:n
         grad_cost = grad_cost + 2*costGen1(kk)*(exp_Phi{kk}*exp_V_k);
@@ -205,12 +207,12 @@ while iter_diff > 10^-4 do
         jacobian_g(6*n + m + kk,:) = -2*(exp_Tt{kk}*exp_V_k)';
     end
     
-    grad_lagrangian = grad_cost + lambda_k'*jacobian_g;
+    grad_lagrangian = grad_cost' + lambda_k'*jacobian_g;
 
-    hess_lagrangian = zeros(2*n,2*n);
+    hess_lagrangian = zeros( 2*n,2*n);
     
     for kk = 1:n
-        hess_lagrangian = hess_lagrangian + 2*costGen1(kk)*exp_Phi{kk} 
+        hess_lagrangian = hess_lagrangian + 2*costGen1(kk)*exp_Phi{kk}; 
     end
     
     for kk = 1:m
@@ -218,15 +220,15 @@ while iter_diff > 10^-4 do
     end
 
     cvx_begin
-        variable exp_V(2*n) V(n) W(n, n) obj;
+        variables exp_V(2*n) V(n) W(n, n) obj;
         variables Pg(n) Qg(n) Pinj(n) Qinj(n) Vsq(n) aux(n); 
         variables Pf(m) Pt(m);
         dual variables lam1 lam2 lam3 lam4 lam5 lam6 lam7 lam8;
         minimise obj;
         subject to
-
-            obj = grad_lagrangian'* (exp_V-exp_V_k) + 1/2 * (exp_V-exp_V_k)'* hess_lagrangian * (exp_V-exp_V_k);
-            
+            obj == grad_lagrangian * (exp_V-exp_V_k) ...
+                        + 1/2 * (exp_V-exp_V_k)'* hess_lagrangian ...
+                        * (exp_V - exp_V_k);
             for kk = 1:n
                 Pinj(kk) == exp_V_k'* exp_Phi{kk} * exp_V_k ;
                 Qinj(kk) == exp_V_k'* exp_Psi{kk} * exp_V_k;
@@ -274,8 +276,8 @@ for kk = 1:n
         + costGen1(kk) * Pg(kk) ...
         + costGen0(kk);
 end
-
-V_fin = exp_V_k;
+V_fin = complex(exp_V_k(1:n), exp_V_k(n+1:2*n));
+objective_value = sum(objective_value)*conditionObj;
 end
 
 

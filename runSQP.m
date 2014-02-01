@@ -209,7 +209,7 @@ while and(iter_diff > 10^-4, count < 10)
     
     grad_lagrangian = grad_cost' + lambda_k'*jacobian_g;
 
-    hess_lagrangian = zeros(2*n,2*n);
+    hess_lagrangian = zeros( 2*n,2*n);
     
     for kk = 1:n
         hess_lagrangian = hess_lagrangian + 2*costGen1(kk)*exp_Phi{kk}; 
@@ -226,9 +226,9 @@ while and(iter_diff > 10^-4, count < 10)
         dual variables lam1 lam2 lam3 lam4 lam5 lam6 lam7 lam8;
         minimise obj;
         subject to
-
-            obj = grad_lagrangian'* (exp_V-exp_V_k) + 1/2 * (exp_V-exp_V_k)'* hess_lagrangian * (exp_V-exp_V_k);
-            
+            obj == grad_lagrangian * (exp_V-exp_V_k) ...
+                        + 1/2 * (exp_V-exp_V_k)'* hess_lagrangian ...
+                        * (exp_V - exp_V_k);
             for kk = 1:n
                 Pinj(kk) == exp_V_k'* exp_Phi{kk} * exp_V_k ;
                 Qinj(kk) == exp_V_k'* exp_Psi{kk} * exp_V_k;
