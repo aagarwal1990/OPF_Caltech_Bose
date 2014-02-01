@@ -231,10 +231,8 @@ for i = 1:6
     lamda0(index - n + 1 : index, 1) = lamda_temp(i);
 end
 
-for i = 7:8
-    index = m * i;
-    lamda0(index - m + 1 : index, 1) = lamda_temp(i);
-end
+lamda0(85 : 104, 1) = lamda_temp(7);
+lamda0(105 : 124, 1) = lamda_temp(8);
 
 [objective_value, V_fin]  = runSQP( V0, lamda0, case_num );
 objective_value

@@ -152,10 +152,11 @@ line_limits(14) = -0.995;
 line_limits(15) = 0.5000;
 
 % Starting point for SQP
-V_k = V0;
+V_k = V0';
 iter_diff = 100;
-lamda_k = lamda0;
-count = 0
+lambda_k = lamda0;
+length(lambda_k)
+count = 0;
 exp_V_k = cat(1,real(V_k), imag(V_k));
 exp_Phi = {};
 exp_Psi = {};
