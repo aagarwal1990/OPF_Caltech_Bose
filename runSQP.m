@@ -222,7 +222,7 @@ while iter_diff > 10^-4 do
         minimise obj;
         subject to
 
-            obj = grad_lagrangian'*(exp_V-exp_V_k) + 1/2*(exp_V-exp_V_k)'*hess_lagrangian*(exp_V-exp_V_k);
+            obj = grad_lagrangian'* (exp_V-exp_V_k) + 1/2 * (exp_V-exp_V_k)'* hess_lagrangian * (exp_V-exp_V_k);
             
             for kk = 1:n
                 Pinj(kk) == exp_V_k'* exp_Phi{kk} * exp_V_k ;
@@ -239,8 +239,8 @@ while iter_diff > 10^-4 do
             
             % Line limits
             for bb = 1:m
-                Pf(bb) == V' * Ff{bb} * V;
-                Pt(bb) == V' * Tt{bb} * V;
+                Pf(bb) == exp_V_k' * exp_Ff{bb} * exp_V_k;
+                Pt(bb) == exp_V_k' * exp_Tt{bb} * exp_V_k;
             end
             
             % Contraints
