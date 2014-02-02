@@ -1,4 +1,4 @@
-function [ objective_value, V_fin ] = runSQP( V0, lamda0, case_num )
+function [ objective_value, V_fin ] = runSQP( V0, lambda0, case_num )
 %UNTITLED Summary of this function goes here
 %   Detailed explanation goes here
 
@@ -154,7 +154,7 @@ line_limits(15) = 0.5000;
 % Starting point for SQP
 V_k = V0';
 iter_diff = 100;
-lambda_k = lamda0;
+lambda_k = lambda0;
 count = 0;
 exp_V_k = cat(1,real(V_k), imag(V_k));
 exp_Phi = {};
@@ -211,13 +211,26 @@ while and(iter_diff > 10^-4, count < 10)
     hess_lagrangian = zeros( 2*n,2*n);
     
     for kk = 1:n
-        hess_lagrangian = hess_lagrangian + 2*costGen1(kk)*exp_Phi{kk}; 
+        hess_lagrangian = hess_lagrangian ...
+                + 2*costGen1(kk)*exp_Phi{kk};
     end
     
-    for kk = 1:m
-        hess_lagrangian = hess_lagrangian + 2*(exp_Ff{kk} - exp_Tt{kk});
+    for kk = 1:n
+        hess_lagrangian = hess_lagrangian ...
+                            + 2 * lambda_k(kk, :) * exp_Phi{kk} ...
+                            - 2 * lambda_k(n+kk, :) * exp_Phi{kk} ...
+                            + 2 * lambda_k(2*n+kk, :) * exp_Psi{kk} ...
+                            - 2 * lambda_k(3*n+kk, :) * exp_Psi{kk} ...
+                            + 2 * lambda_k(4*n+kk, :)  ...
+                            - 2 * lambda_k(5*n+kk, :); 
     end
-
+    
+     for kk = 1:m
+         hess_lagrangian = hess_lagrangian ...
+                          + 2*lambda_k(6*n+kk, :)*exp_Ff{kk} ...
+                          + 2*lambda_k(6*n+m+kk, :)*exp_Tt{kk};
+    end
+   
     cvx_begin
         variables exp_V(2*n) V(n) W(n, n) obj;
         variables Pg(n) Qg(n) Pinj(n) Qinj(n) Vsq(n) aux(n); 
@@ -263,15 +276,15 @@ while and(iter_diff > 10^-4, count < 10)
     
     iter_diff = norm(exp_V - exp_V_k);
     exp_V_k = exp_V;
-    lamda_temp = [lam1', lam2', lam3', lam4', lam5', lam6', lam7', lam8'];
+    lambda_temp = [lam1', lam2', lam3', lam4', lam5', lam6', lam7', lam8'];
     for i = 1:6
         index = n * i;
-        lamda_k(index - n + 1 : index, 1) = lamda_temp(i);
+        lambda_k(index - n + 1 : index, 1) = lambda_temp(i);
     end
 
     for i = 7:8
         index = m * i;
-        lamda_k(index - m + 1 : index, 1) = lamda_temp(i);
+        lambda_k(index - m + 1 : index, 1) = lambda_temp(i);
     end
 end
 
