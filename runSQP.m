@@ -1,4 +1,4 @@
-function [ objective_value, V_fin ] = runSQP( V0, lambda0, case_num )
+function [hess_lagrangian, objective_value, V_fin ] = runSQP( V0, lambda0, case_num )
 %UNTITLED Summary of this function goes here
 %   Detailed explanation goes here
 
@@ -187,11 +187,11 @@ while and(iter_diff > 10^-4, count < 10)
     for kk = 1:n
         grad_cost = grad_cost + 2*costGen1(kk)*(exp_Phi{kk}*exp_V_k);
     end
-
+    
+    % Calculation of jacobian of lagrangian
     jacobian_g = zeros(6*n + 2*m, 2*n);
-
-    % adding determinant of Pg <= PgMax
-
+    
+    % bus constraints segment of jacobian of lagrangian
     for kk = 1:n
         jacobian_g(kk,:)     = 2*(exp_Phi{kk}*exp_V_k)';
         jacobian_g(n+kk,:)   = -2*(exp_Phi{kk}*exp_V_k)';
@@ -201,20 +201,24 @@ while and(iter_diff > 10^-4, count < 10)
         jacobian_g(5*n+kk,:) = -2*exp_V_k';
     end
     
+    % branch constraints segment of jacobian of lagrangian
     for kk = 1:m
         jacobian_g(6*n+kk,:) = 2*(exp_Ff{kk}*exp_V_k)';
         jacobian_g(6*n + m + kk,:) = -2*(exp_Tt{kk}*exp_V_k)';
     end
     
     grad_lagrangian = grad_cost' + lambda_k'*jacobian_g;
-
+    
+    % Calculation of hessian of lagrangian
     hess_lagrangian = zeros( 2*n,2*n);
     
+    % generation cost segment of lagrangian
     for kk = 1:n
         hess_lagrangian = hess_lagrangian ...
                 + 2*costGen1(kk)*exp_Phi{kk};
     end
     
+    % bus constraints segment of hessian of lagrangian
     for kk = 1:n
         hess_lagrangian = hess_lagrangian ...
                             + 2 * lambda_k(kk, :) * exp_Phi{kk} ...
@@ -225,7 +229,8 @@ while and(iter_diff > 10^-4, count < 10)
                             - 2 * lambda_k(5*n+kk, :); 
     end
     
-     for kk = 1:m
+    % branch constraints segment of hessian of lagrangian
+    for kk = 1:m
          hess_lagrangian = hess_lagrangian ...
                           + 2*lambda_k(6*n+kk, :)*exp_Ff{kk} ...
                           + 2*lambda_k(6*n+m+kk, :)*exp_Tt{kk};
@@ -238,9 +243,9 @@ while and(iter_diff > 10^-4, count < 10)
         dual variables lam1 lam2 lam3 lam4 lam5 lam6 lam7 lam8;
         minimise obj;
         subject to
-            obj == grad_lagrangian * (exp_V-exp_V_k) ...
-                        + 1/2 * (exp_V-exp_V_k)'* hess_lagrangian ...
-                        * (exp_V - exp_V_k);
+            obj == grad_lagrangian * (exp_V-exp_V_k); ...
+%                         + 1/2 * (exp_V-exp_V_k)'* hess_lagrangian ...
+%                         * (exp_V - exp_V_k);
             for kk = 1:n
                 Pinj(kk) == exp_V_k'* exp_Phi{kk} * exp_V_k ;
                 Qinj(kk) == exp_V_k'* exp_Psi{kk} * exp_V_k;

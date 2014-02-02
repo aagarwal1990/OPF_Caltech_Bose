@@ -234,7 +234,7 @@ end
 lamda0(85 : 104, 1) = lamda_temp(7);
 lamda0(105 : 124, 1) = lamda_temp(8);
 
-[objective_value, V_fin]  = runSQP( V0, lamda0, case_num );
+[hess_lagrangian, objective_value, V_fin]  = runSQP( V0, lamda0, case_num );
 objective_value
 V_fin
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
