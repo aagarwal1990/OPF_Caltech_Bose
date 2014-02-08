@@ -15,7 +15,7 @@ clear all
 close all
 clc
 
-case_num = 'case14';
+case_num = 'case9';
 %%%%%%%%%%%%
 
 display('\n');
@@ -199,8 +199,8 @@ cvx_begin
         lam4 : QgMin - Qg <= 0;
         lam5 : Vsq - WMax <= 0;
         lam6 : WMin - Vsq <= 0;
-        lam7 : Pf - line_limits <= 0;
-        lam8 : -line_limits - Pt <= 0;
+%         lam7 : Pf - line_limits <= 0;
+%         lam8 : -line_limits - Pt <= 0;
         
         W == hermitian_semidefinite( n );
 cvx_end
@@ -223,16 +223,16 @@ eigs(W)
 eig_1 = lamda(1);
 R = chol(W);
 V0 = R(1, :);
-lamda0 = zeros(6*n + 2*m, 1);
+lamda0 = zeros(6*n, 1);
 
-lamda_temp = [lam1', lam2', lam3', lam4', lam5', lam6', lam7', lam8'];
+lamda_temp = [lam1', lam2', lam3', lam4', lam5', lam6']; %, lam7', lam8'];
 for i = 1:6
     index = n * i;
     lamda0(index - n + 1 : index, 1) = lamda_temp(i);
 end
 
-lamda0(85 : 104, 1) = lamda_temp(7);
-lamda0(105 : 124, 1) = lamda_temp(8);
+% lamda0(85 : 104, 1) = lamda_temp(7);
+% lamda0(105 : 124, 1) = lamda_temp(8);
 
 [hess_lagrangian, objective_value, V_fin]  = runSQP( V0, lamda0, case_num );
 objective_value

@@ -189,7 +189,7 @@ while and(iter_diff > 10^-4, count < 10)
     end
     
     % Calculation of jacobian of lagrangian
-    jacobian_g = zeros(6*n + 2*m, 2*n);
+    jacobian_g = zeros(6*n, 2*n);
     
     % bus constraints segment of jacobian of lagrangian
     for kk = 1:n
@@ -202,11 +202,11 @@ while and(iter_diff > 10^-4, count < 10)
     end
     
     % branch constraints segment of jacobian of lagrangian
-    for kk = 1:m
-        jacobian_g(6*n+kk,:) = 2*(exp_Ff{kk}*exp_V_k)';
-        jacobian_g(6*n + m + kk,:) = -2*(exp_Tt{kk}*exp_V_k)';
-    end
-    
+%     for kk = 1:m
+%         jacobian_g(6*n+kk,:) = 2*(exp_Ff{kk}*exp_V_k)';
+%         jacobian_g(6*n + m + kk,:) = -2*(exp_Tt{kk}*exp_V_k)';
+%     end
+%     
     grad_lagrangian = grad_cost' + lambda_k'*jacobian_g;
     
     % Calculation of hessian of lagrangian
@@ -230,12 +230,19 @@ while and(iter_diff > 10^-4, count < 10)
     end
     
     % branch constraints segment of hessian of lagrangian
-    for kk = 1:m
-         hess_lagrangian = hess_lagrangian ...
-                          + 2*lambda_k(6*n+kk, :)*exp_Ff{kk} ...
-                          - 2*lambda_k(6*n+m+kk, :)*exp_Tt{kk};
-    end
-   
+%     for kk = 1:m
+%          hess_lagrangian = hess_lagrangian ...
+%                           + 2*lambda_k(6*n+kk, :)*exp_Ff{kk} ...
+%                           - 2*lambda_k(6*n+m+kk, :)*exp_Tt{kk};
+%     end
+    A = -hess_lagrangian;
+    issym=@(x) all(all(tril(x)==triu(x).'));
+    issym(A)
+    eigs(A)
+    diag(A)
+    A
+    chol(A)
+    
     cvx_begin
         variables exp_V(2*n) V(n) W(n, n) obj;
         variables Pg(n) Qg(n) Pinj(n) Qinj(n) Vsq(n) aux(n); 
@@ -268,29 +275,32 @@ while and(iter_diff > 10^-4, count < 10)
             lam4 : QgMin - Qg + jacobian_g(3*n+1:4*n, :)*(exp_V-exp_V_k)<= 0;
             lam5 : Vsq - WMax + jacobian_g(4*n+1:5*n, :)*(exp_V-exp_V_k)<= 0;
             lam6 : WMin - Vsq + jacobian_g(5*n+1:6*n, :)*(exp_V-exp_V_k)<= 0;
-            lam7 : Pf - line_limits + ...
-                    jacobian_g(6*n+1:6*n+m, :)*(exp_V-exp_V_k)<= 0;
-            lam8 : - line_limits - Pt + ...
-                    jacobian_g(6*n+1+m:6*n+2*m, :)*(exp_V-exp_V_k)<= 0;
+%             lam7 : Pf - line_limits + ...
+%                     jacobian_g(6*n+1:6*n+m, :)*(exp_V-exp_V_k)<= 0;
+%             lam8 : - line_limits - Pt + ...
+%                     jacobian_g(6*n+1+m:6*n+2*m, :)*(exp_V-exp_V_k)<= 0;
 
     cvx_end
     
-    for kk = 1:m
-        jacobian_g(6*n+kk,:) = 2*(exp_Ff{kk}*exp_V_k)';
-        jacobian_g(6*n + m + kk,:) = -2*(exp_Tt{kk}*exp_V_k)';
+%     for kk = 1:m
+%         jacobian_g(6*n+kk,:) = 2*(exp_Ff{kk}*exp_V_k)';
+%         jacobian_g(6*n + m + kk,:) = -2*(exp_Tt{kk}*exp_V_k)';
     
     iter_diff = norm(exp_V - exp_V_k);
+    
     exp_V_k = exp_V;
-    lambda_temp = [lam1', lam2', lam3', lam4', lam5', lam6', lam7', lam8'];
+    
+    lambda_temp = [lam1', lam2', lam3', lam4', lam5', lam6']; %, lam7', lam8'];
+    
     for i = 1:6
         index = n * i;
         lambda_k(index - n + 1 : index, 1) = lambda_temp(i);
     end
 
-    for i = 7:8
-        index = m * i;
-        lambda_k(index - m + 1 : index, 1) = lambda_temp(i);
-    end
+%     for i = 7:8
+%         index = m * i;
+%         lambda_k(index - m + 1 : index, 1) = lambda_temp(i);
+%     end
 end
 
 objective_value = zeros(n, 1);
