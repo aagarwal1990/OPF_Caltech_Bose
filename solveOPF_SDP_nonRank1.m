@@ -221,9 +221,9 @@ eig_1 = lamda(1);
 R = chol(W);
 V0 = R(1, :);
 
-lamda_temp = [lam1', lam2', lam3', lam4', lam5', lam6', lam7', lam8'];
+lambda_temp = [lam1', lam2', lam3', lam4', lam5', lam6', lam7', lam8'];
 
-[hess_lagrangian, objective_value, V_fin]  = runSQP( V0, lamda_temp', case_num );
+[hess_lagrangian, objective_value, V_fin]  = runSQP( V0, lambda_temp', case_num );
 objective_value
 V_fin
 

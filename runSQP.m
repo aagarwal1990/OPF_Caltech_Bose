@@ -280,6 +280,7 @@ while and(iter_diff > 10^-4, count < 10)
     exp_V_k = exp_V;
     
     lambda_temp = [lam1', lam2', lam3', lam4', lam5', lam6', lam7', lam8'];
+    lambda_k = lambda_temp';
     
 end
 
