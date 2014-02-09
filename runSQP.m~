@@ -162,22 +162,22 @@ exp_Psi = {};
 exp_Ff  = {};
 exp_Tt  = {};
 for kk = 1:n
-    top         = cat(2, real(Phi{kk}), -imag(Phi{kk}));
-    bottom      = cat(2, imag(Phi{kk}),  real(Phi{kk}));
+    top = cat(2, real(Phi{kk}), -imag(Phi{kk}));
+    bottom = cat(2, imag(Phi{kk}), real(Phi{kk}));
     exp_Phi{kk} = cat(1, top, bottom);
 
-    top         = cat(2, real(Psi{kk}), -imag(Psi{kk}));
-    bottom      = cat(2, imag(Psi{kk}),  real(Psi{kk}));
+    top = cat(2, real(Psi{kk}), -imag(Psi{kk}));
+    bottom = cat(2, imag(Psi{kk}), real(Psi{kk}));
     exp_Psi{kk} = cat(1, top, bottom);
 end
 
 for kk = 1:m
-    top        = cat(2, real(Ff{kk}), -imag(Ff{kk}));
-    bottom     = cat(2, imag(Ff{kk}),  real(Ff{kk}));
+    top = cat(2, real(Ff{kk}), -imag(Ff{kk}));
+    bottom = cat(2, imag(Ff{kk}), real(Ff{kk}));
     exp_Ff{kk} = cat(1, top, bottom);
     
-    top        = cat(2, real(Tt{kk}), -imag(Tt{kk}));
-    bottom     = cat(2, imag(Tt{kk}),  real(Tt{kk}));
+    top = cat(2, real(Tt{kk}), -imag(Tt{kk}));
+    bottom = cat(2, imag(Tt{kk}), real(Tt{kk}));
     exp_Tt{kk} = cat(1, top, bottom);
 end
 
@@ -193,17 +193,17 @@ while and(iter_diff > 10^-4, count < 10)
     
     % bus constraints segment of jacobian of lagrangian
     for kk = 1:n
-        jacobian_g(kk,:)     =  2*(exp_Phi{kk}*exp_V_k)';
+        jacobian_g(kk,:)     = 2*(exp_Phi{kk}*exp_V_k)';
         jacobian_g(n+kk,:)   = -2*(exp_Phi{kk}*exp_V_k)';
-        jacobian_g(2*n+kk,:) =  2*(exp_Psi{kk}*exp_V_k)';
+        jacobian_g(2*n+kk,:) = 2*(exp_Psi{kk}*exp_V_k)';
         jacobian_g(3*n+kk,:) = -2*(exp_Psi{kk}*exp_V_k)';
-        jacobian_g(4*n+kk,:) =  2*exp_V_k';
+        jacobian_g(4*n+kk,:) = 2*exp_V_k';
         jacobian_g(5*n+kk,:) = -2*exp_V_k';
     end
     
     % branch constraints segment of jacobian of lagrangian
     for kk = 1:m
-        jacobian_g(6*n+kk,:)       =  2*(exp_Ff{kk}*exp_V_k)';
+        jacobian_g(6*n+kk,:) = 2*(exp_Ff{kk}*exp_V_k)';
         jacobian_g(6*n + m + kk,:) = -2*(exp_Tt{kk}*exp_V_k)';
     end
     
@@ -215,7 +215,7 @@ while and(iter_diff > 10^-4, count < 10)
     % generation cost segment of lagrangian
     for kk = 1:n
         hess_lagrangian = hess_lagrangian ...
-                + 2 * costGen1(kk) * exp_Phi{kk};
+                + 2*costGen1(kk)*exp_Phi{kk};
     end
     
     % bus constraints segment of hessian of lagrangian
@@ -236,15 +236,15 @@ while and(iter_diff > 10^-4, count < 10)
                           - 2*lambda_k(6*n+m+kk, :) * exp_Tt{kk};
     end
     
-    cvx_begin quiet
+    cvx_begin
         variables exp_V(2*n) V(n) W(n, n) obj;
         variables Pg(n) Qg(n) Pinj(n) Qinj(n) Vsq(n) aux(n); 
         variables Pf(m) Pt(m);
         dual variables lam1 lam2 lam3 lam4 lam5 lam6 lam7 lam8;
         minimise obj;
         subject to
-            obj >= grad_lagrangian * (exp_V-exp_V_k) ...
-                        + 1/2 * (exp_V-exp_V_k)' * hess_lagrangian ...
+            obj >= grad_lagrangian * (exp_V-exp_V_k); ...
+                        + 1/2 * (exp_V-exp_V_k)'* hess_lagrangian ...
                         * (exp_V - exp_V_k);
             for kk = 1:n
                 Pinj(kk) == exp_V_k'* exp_Phi{kk} * exp_V_k ;
@@ -269,7 +269,7 @@ while and(iter_diff > 10^-4, count < 10)
             lam5 : Vsq - WMax + jacobian_g(4*n+1:5*n, :)*(exp_V-exp_V_k)<= 0;
             lam6 : WMin - Vsq + jacobian_g(5*n+1:6*n, :)*(exp_V-exp_V_k)<= 0;
             lam7 : Pf - line_limits + ...
-                                jacobian_g(6*n+1:6*n+m, :)*(exp_V-exp_V_k)<= 0;
+                                jacobian_g(6*n+1:6*n+m, :)* (exp_V-exp_V_k)<= 0;
             lam8 : - line_limits - Pt + ...
                                 jacobian_g(6*n+1+m:6*n+2*m, :)*(exp_V-exp_V_k)<= 0;
 
