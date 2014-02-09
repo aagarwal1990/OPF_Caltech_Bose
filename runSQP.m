@@ -273,7 +273,7 @@ while and(iter_diff > 10^-4, count < 10)
             lam5 : Vsq - WMax + jacobian_g(4*n+1:5*n, :)*(exp_V-exp_V_k)<= 0;
             lam6 : WMin - Vsq + jacobian_g(5*n+1:6*n, :)*(exp_V-exp_V_k)<= 0;
             lam7 : Pf - line_limits + ...
-                                jacobian_g(6*n+1:6*n+m, :)*(exp_V-exp_V_k)<= 0;
+                                jacobian_g(6*n+1:6*n+m, :)*(exp_V-exp_V_k)    <= 0;
             lam8 : - line_limits - Pt + ...
                                 jacobian_g(6*n+1+m:6*n+2*m, :)*(exp_V-exp_V_k)<= 0;
 
@@ -325,12 +325,14 @@ while and(iter_diff > 10^-4, count < 10)
                       / (s_k' * hess_neg_one * s_k);
 end
 
+% get objective value 
 objective_value = zeros(n, 1);
 for kk = 1:n
    objective_value(kk) = costGen2(kk) * Pg(kk)^2 ...
-        + costGen1(kk) * Pg(kk) ...
-        + costGen0(kk);
+                       + costGen1(kk) * Pg(kk) ...
+                       + costGen0(kk);
 end
+
 V_fin = complex(exp_V_k(1:n), exp_V_k(n+1:2*n));
-objective_value = sum(objective_value)*conditionObj;
+objective_value = sum(objective_value) * conditionObj;
 end
