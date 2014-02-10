@@ -278,6 +278,42 @@ while and(iter_diff > 10^-4, count < 10)
     iter_diff = norm(exp_V - exp_V_k);
     
     exp_V_k = exp_V;
+    V_k = complex(exp_V_k(1:n), exp_V_k(n+1:2*n));
+    
+    % checking if V_k satisfies original constraints
+    display('Checking assertions')
+    Pinj = zeros(n,1);
+    Qinj = zeros(n,1);
+    Vsq = zeros(n,1);
+    Pf = zeros(m,1);
+    Pt = zeros(m,1);
+    for kk = 1:n
+            Pinj(kk) = V_k' * Phi{kk} * V_k;
+            Qinj(kk) = V_k' * Psi{kk} * V_k;
+            Vsq(kk)  = abs(V_k(kk));
+            
+        end
+    
+        Pg = Pinj + Pd;
+        Qg = Qinj + Qd;
+                
+        % Line limits
+        for bb = 1:m
+            Pf(bb) = V_k' * Ff{bb}* V_k;
+            Pt(bb) = V_k' * Tt{bb}* V_k;
+        end
+        
+        % Contraints
+        eps = 10^-3;
+        assert(min(real(Pg) - PgMax <= eps)==1)
+        assert(min(PgMin - real(Pg) <= eps)==1)
+        assert(min(real(Qg) - QgMax <= eps)==1)
+        assert(min(QgMin - real(Qg) <= eps)==1)
+        assert(min(Vsq - WMax <= eps)==1)
+        assert(min(WMin - Vsq <= eps)==1)
+        assert(min(Pf - line_limits <= eps)==1)
+        assert(min(-line_limits - Pt <= eps)==1)
+        sprintf('constraints true with eps = %d', eps)
     
     lambda_temp = [lam1', lam2', lam3', lam4', lam5', lam6', lam7', lam8'];
     lambda_k = lambda_temp';
