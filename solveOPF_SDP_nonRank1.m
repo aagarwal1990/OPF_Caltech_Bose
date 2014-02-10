@@ -213,7 +213,7 @@ objective_value = sum(aux) * conditionObj
 eig_lst = eig(W);
 max_eig = max(eig_lst);
 maxEigRatio = max(eig_lst(eig_lst ~= max_eig))/max_eig;
-eigs(W)
+eig(W)
 
 % get voltage values
 [vec, lamda] = eigs(W);
@@ -221,7 +221,7 @@ eig_1 = lamda(1);
 R = chol(W);
 V0 = R(1, :);
 
-lambda_temp = [lam1', lam2', lam3', lam4', lam5', lam6'];%, lam7', lam8'];
+lambda_temp = [lam1', lam2', lam3', lam4', lam5', lam6']; %, lam7', lam8'];
 
 [hess_lagrangian, objective_value, V_fin]  = runSQP( V0, lambda_temp', case_num );
 objective_value
