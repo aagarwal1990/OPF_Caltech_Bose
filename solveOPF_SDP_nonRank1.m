@@ -212,8 +212,8 @@ objective_value = sum(aux)*conditionObj;
 % get max eig ratio
 eig_lst = eig(W);
 max_eig = max(eig_lst);
-maxEigRatio = max(eig_lst(eig_lst ~= max_eig))/max_eig;
-eigs(W)
+maxEigRatio = max(eig_lst(eig_lst ~= max_eig))/max_eig
+
 
 % get voltage values
 [vec, lamda] = eigs(W);
