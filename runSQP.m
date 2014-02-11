@@ -328,52 +328,6 @@ while and(iter_diff > 10^-4, count < 10)
                       + (q_k' * q_k) / (q_k * s_k) ...
                       - (hess_neg_one * s_k * s_k' * hess_neg_one') ...
                       / (s_k' * hess_neg_one * s_k);
-                  
-                  
-%     % Checking if V_k satisfies original constraints
-%     display('Checking QCQP constraints with V_k')
-%     Pinj = zeros(n,1);
-%     Qinj = zeros(n,1);
-%     Vsq = zeros(n,1);
-%     Pf = zeros(m,1);
-%     Pt = zeros(m,1);
-%     for kk = 1:n
-%             Pinj(kk) = V_k' * Phi{kk} * V_k;
-%             Qinj(kk) = V_k' * Psi{kk} * V_k;
-%             Vsq(kk)  = abs(V_k(kk));
-%             
-%         end
-%     
-%         Pg = Pinj + Pd;
-%         Qg = Qinj + Qd;
-%                 
-%         % Line limits
-%         for bb = 1:m
-%             Pf(bb) = V_k' * Ff{bb}* V_k;
-%             Pt(bb) = V_k' * Tt{bb}* V_k;
-%         end
-%         
-%         % Contraints
-%         epsilon = 0;
-%         assert(min(real(Pg) - PgMax <= epsilon)==1)
-%         assert(min(PgMin - real(Pg) <= epsilon)==1)
-%         assert(min(real(Qg) - QgMax <= epsilon)==1)
-%         assert(min(QgMin - real(Qg) <= epsilon)==1)
-%         assert(min(Vsq - WMax <= epsilon)==1)
-%         assert(min(WMin - Vsq <= epsilon)==1)
-%         assert(min(Pf - line_limits <= epsilon)==1)
-%         assert(min(-line_limits - Pt <= epsilon)==1)
-%         sprintf('constraints satisfied with epsilon = %d', epsilon)
-%         
-%         objective_value = zeros(n, 1);
-%         for kk = 1:n
-%            objective_value(kk) = costGen2(kk) * Pg(kk)^2 ...
-%                                + costGen1(kk) * Pg(kk) ...
-%                                + costGen0(kk);
-%         end
-%         objective_value = sum(objective_value) * conditionObj;
-%         sprintf('iter_obj_val %d', objective_value)
-
 end
 
 % get objective value 
