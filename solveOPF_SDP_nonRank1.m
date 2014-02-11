@@ -12,7 +12,7 @@ clear all
 close all
 clc
 
-case_num = 'case14';
+case_num = 'case39';
 %%%%%%%%%%%%
 
 display('\n');
@@ -221,11 +221,61 @@ eig_1 = lamda(1);
 R = chol(W);
 V0 = R(1, :);
 
-lambda_temp = [lam1', lam2', lam3', lam4', lam5', lam6', lam7', lam8'];
+sprintf('Checking assertions on SDP V0')
+epsilon = 10^-5;
+assert(min(real(Pg) - PgMax <= epsilon)==1)
+assert(min(PgMin - real(Pg) <= epsilon)==1)
+assert(min(real(Qg) - QgMax <= epsilon)==1)
+assert(min(QgMin - real(Qg) <= epsilon)==1)
+assert(min(Vsq - WMax <= epsilon)==1)
+assert(min(WMin - Vsq <= epsilon)==1)
+assert(min(Pf - line_limits <= epsilon)==1)
+assert(min(-line_limits - Pt <= epsilon)==1)
+sprintf('constraints are satsified with epsilon = %d', epsilon)
 
-[hess_lagrangian, objective_value, V_fin]  = runSQP( V0, lambda_temp', case_num );
+lambda0 = [lam1', lam2', lam3', lam4', lam5', lam6', lam7', lam8'];
+
+[hess_lagrangian, objective_value, V_fin]  = runSQP( V0, lambda0', case_num );
 objective_value
 V_fin
+
+% Checking if V_k satisfies original constraints
+display('Checking QCQP constraints with V_fin')
+Pinj = zeros(n,1);
+Qinj = zeros(n,1);
+Vsq = zeros(n,1);
+Pf = zeros(m,1);
+Pt = zeros(m,1);
+for kk = 1:n
+    Pinj(kk) = V_fin' * Phi{kk} * V_fin;
+    Qinj(kk) = V_fin' * Psi{kk} * V_fin;
+    Vsq(kk)  = abs(V_fin(kk));
+
+end
+
+Pg = Pinj + Pd;
+Qg = Qinj + Qd;
+
+% Line limits
+for bb = 1:m
+    Pf(bb) = V_fin' * Ff{bb}* V_fin;
+    Pt(bb) = V_fin' * Tt{bb}* V_fin;
+end
+
+% Contraints
+epsilon = 10^-5;
+assert(min(real(Pg) - PgMax <= epsilon)==1)
+assert(min(PgMin - real(Pg) <= epsilon)==1)
+assert(min(real(Qg) - QgMax <= epsilon)==1)
+assert(min(QgMin - real(Qg) <= epsilon)==1)
+assert(min(Vsq - WMax <= epsilon)==1)
+assert(min(WMin - Vsq <= epsilon)==1)
+assert(min(Pf - line_limits <= epsilon)==1)
+assert(min(-line_limits - Pt <= epsilon)==1)
+sprintf('constraints satisfied with epsilon = %d', epsilon)
+
+
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Run Matpower's solver
