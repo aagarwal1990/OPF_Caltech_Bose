@@ -12,7 +12,7 @@ clear all
 close all
 clc
 
-case_num = 'case39';
+case_num = 'case14';
 %%%%%%%%%%%%
 
 display('\n');
