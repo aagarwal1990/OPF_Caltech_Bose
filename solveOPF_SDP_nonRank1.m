@@ -12,7 +12,8 @@ clear all
 close all
 clc
 
-case_num = 'case14';
+case_num = 'case39';
+use_line_limits = 0;
 %%%%%%%%%%%%
 
 display('\n');
@@ -196,8 +197,10 @@ cvx_begin
         lam4 : QgMin - Qg <= 0;
         lam5 : Vsq - WMax <= 0;
         lam6 : WMin - Vsq <= 0;
-        lam7 : Pf - line_limits <= 0;
-        lam8 : -line_limits - Pt <= 0;
+        if use_line_limits == 1
+            lam7 : Pf - line_limits <= 0;
+            lam8 : -line_limits - Pt <= 0;
+        end
         
         W == hermitian_semidefinite( n );
 cvx_end
@@ -229,13 +232,19 @@ assert(min(real(Qg) - QgMax <= epsilon)==1)
 assert(min(QgMin - real(Qg) <= epsilon)==1)
 assert(min(Vsq - WMax <= epsilon)==1)
 assert(min(WMin - Vsq <= epsilon)==1)
-assert(min(Pf - line_limits <= epsilon)==1)
-assert(min(-line_limits - Pt <= epsilon)==1)
+if use_line_limits == 1
+    assert(min(Pf - line_limits <= epsilon)==1)
+    assert(min(-line_limits - Pt <= epsilon)==1)
+end
 sprintf('constraints are satsified with epsilon = %d', epsilon)
 
-lambda0 = [lam1', lam2', lam3', lam4', lam5', lam6', lam7', lam8'];
+if use_line_limits == 1
+    lambda0 = [lam1', lam2', lam3', lam4', lam5', lam6', lam7', lam8'];
+else
+    lambda0 = [lam1', lam2', lam3', lam4', lam5', lam6'];
+end
 
-[hess_lagrangian, objective_value, V_fin]  = runSQP( V0, lambda0', case_num );
+[hess_lagrangian, objective_value, V_fin]  = runSQP( V0, lambda0', case_num, use_line_limits);
 objective_value
 V_fin
 

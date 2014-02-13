@@ -11,11 +11,11 @@
 
 % display('Check whether loadcase is commented')
 %%%%%%%%%%%%   COMMENT OUT FOR LOOP
-% clear all
-% close all
-% clc
-% 
-% case_num = 'case9';
+clear all
+close all
+clc
+
+case_num = 'case39';
 %%%%%%%%%%%%
 
 display('\n');

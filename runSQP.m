@@ -1,4 +1,4 @@
-function [hess_lagrangian, objective_value, V_fin ] = runSQP( V0, lambda0, case_num )
+function [hess_lagrangian, objective_value, V_fin ] = runSQP( V0, lambda0, case_num, use_line_limits)
 %UNTITLED Summary of this function goes here
 %   Detailed explanation goes here
 
@@ -155,6 +155,7 @@ line_limits(15) = 0.5000;
 V_k = V0';
 iter_diff = 100;
 lambda_k = lambda0;
+lambda_k = lambda0;
 count = 0;
 exp_V_k = cat(1,real(V_k), imag(V_k));
 exp_Phi = {};
@@ -188,8 +189,11 @@ for kk = 1:n
 end
 
 % Calculation of jacobian of lagrangian
-jacobian_g = zeros(6*n + 2*m, 2*n);
-% jacobian_g = zeros(6*n, 2*n);
+if use_line_limits == 1
+    jacobian_g = zeros(6*n + 2*m, 2*n);
+else
+    jacobian_g = zeros(6*n, 2*n);
+end
 
 % bus constraints segment of jacobian of lagrangian
 for kk = 1:n
@@ -202,9 +206,11 @@ for kk = 1:n
 end
 
 % branch constraints segment of jacobian of lagrangian
-for kk = 1:m
-    jacobian_g(6*n+kk,:)       =  2*(exp_Ff{kk}*exp_V_k)';
-    jacobian_g(6*n + m + kk,:) = -2*(exp_Tt{kk}*exp_V_k)';
+if use_line_limits == 1
+    for kk = 1:m
+        jacobian_g(6*n+kk,:)       =  2*(exp_Ff{kk}*exp_V_k)';
+        jacobian_g(6*n + m + kk,:) = -2*(exp_Tt{kk}*exp_V_k)';
+    end
 end
 
 grad_lagrangian = grad_cost' + lambda_k' * jacobian_g;
@@ -230,14 +236,18 @@ for kk = 1:n
 end
 
 % branch constraints segment of hessian of lagrangian
-for kk = 1:m
-     hess_lagrangian = hess_lagrangian ...
-                      + 2*lambda_k(6*n+kk, :)   * exp_Ff{kk} ...
-                      - 2*lambda_k(6*n+m+kk, :) * exp_Tt{kk};
+if use_line_limits == 1
+    for kk = 1:m
+         hess_lagrangian = hess_lagrangian ...
+                          + 2*lambda_k(6*n+kk, :)   * exp_Ff{kk} ...
+                          - 2*lambda_k(6*n+m+kk, :) * exp_Tt{kk};
+    end
 end
     
 while and(iter_diff > 10^-4, count < 10)
     count = count + 1
+    
+    sum(eig(hess_lagrangian)<0)
     
     q_k_neg_one = grad_lagrangian;
     
@@ -276,11 +286,12 @@ while and(iter_diff > 10^-4, count < 10)
             lam4 : QgMin - Qg + jacobian_g(3*n+1:4*n, :)*(exp_V-exp_V_k)<= 0;
             lam5 : Vsq - WMax + jacobian_g(4*n+1:5*n, :)*(exp_V-exp_V_k)<= 0;
             lam6 : WMin - Vsq + jacobian_g(5*n+1:6*n, :)*(exp_V-exp_V_k)<= 0;
-            lam7 : Pf - line_limits + ...
-                                jacobian_g(6*n+1:6*n+m, :)*(exp_V-exp_V_k)    <= 0;
-            lam8 : - line_limits - Pt + ...
-                                jacobian_g(6*n+1+m:6*n+2*m, :)*(exp_V-exp_V_k)<= 0;
-
+            if use_line_limits == 1
+                lam7 : Pf - line_limits + ...
+                                    jacobian_g(6*n+1:6*n+m, :)*(exp_V-exp_V_k)    <= 0;
+                lam8 : - line_limits - Pt + ...
+                                    jacobian_g(6*n+1+m:6*n+2*m, :)*(exp_V-exp_V_k)<= 0;
+            end
     cvx_end
     
     iter_diff = norm(exp_V - exp_V_k);
@@ -289,18 +300,22 @@ while and(iter_diff > 10^-4, count < 10)
     s_k = exp_V - exp_V_k;
     
     exp_V_k = exp_V;
-    
-    lambda_temp = [lam1', lam2', lam3', lam4', lam5', lam6', lam7', lam8'];
-    lambda_k = lambda_temp';
+    if use_line_limits == 1
+        lambda_k = [lam1', lam2', lam3', lam4', lam5', lam6', lam7', lam8']';
+    else
+        lambda_k = [lam1', lam2', lam3', lam4', lam5', lam6']';
+    end
     
     grad_cost = zeros(2*n,1);
     for kk = 1:n
         grad_cost = grad_cost + 2*costGen1(kk)*(exp_Phi{kk}*exp_V_k);
     end
-
     % Calculation of jacobian of lagrangian
-    jacobian_g = zeros(6*n + 2*m, 2*n);
-%     jacobian_g = zeros(6*n, 2*n);
+    if use_line_limits == 1
+        jacobian_g = zeros(6*n + 2*m, 2*n);
+    else
+        jacobian_g = zeros(6*n, 2*n);
+    end
 
     % bus constraints segment of jacobian of lagrangian
     for kk = 1:n
@@ -313,9 +328,11 @@ while and(iter_diff > 10^-4, count < 10)
     end
 
     % branch constraints segment of jacobian of lagrangian
-    for kk = 1:m
-        jacobian_g(6*n+kk,:)       =  2*(exp_Ff{kk}*exp_V_k)';
-        jacobian_g(6*n + m + kk,:) = -2*(exp_Tt{kk}*exp_V_k)';
+    if use_line_limits == 1
+        for kk = 1:m
+            jacobian_g(6*n+kk,:)       =  2*(exp_Ff{kk}*exp_V_k)';
+            jacobian_g(6*n + m + kk,:) = -2*(exp_Tt{kk}*exp_V_k)';
+        end
     end
     
     % updated jocobian of lagrangian
