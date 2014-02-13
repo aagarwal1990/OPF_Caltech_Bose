@@ -215,8 +215,7 @@ objective_value = sum(aux) * conditionObj
 % get max eig ratio
 eig_lst = eig(W);
 max_eig = max(eig_lst);
-maxEigRatio = max(eig_lst(eig_lst ~= max_eig))/max_eig;
-eig(W)
+maxEigRatio = max(eig_lst(eig_lst ~= max_eig))/max_eig
 
 % get voltage values
 [vec, lamda] = eigs(W);
@@ -225,7 +224,7 @@ R = chol(W);
 V0 = R(1, :);
 
 sprintf('Checking assertions on SDP V0')
-epsilon = 10^-5;
+epsilon = 10^-4;
 assert(min(real(Pg) - PgMax <= epsilon)==1)
 assert(min(PgMin - real(Pg) <= epsilon)==1)
 assert(min(real(Qg) - QgMax <= epsilon)==1)
@@ -272,7 +271,7 @@ for bb = 1:m
 end
 
 % Contraints
-epsilon = 10^-5;
+epsilon = 10^-4;
 assert(min(real(Pg) - PgMax <= epsilon)==1)
 assert(min(PgMin - real(Pg) <= epsilon)==1)
 assert(min(real(Qg) - QgMax <= epsilon)==1)
@@ -282,72 +281,3 @@ assert(min(WMin - Vsq <= epsilon)==1)
 assert(min(Pf - line_limits <= epsilon)==1)
 assert(min(-line_limits - Pt <= epsilon)==1)
 sprintf('constraints satisfied with epsilon = %d', epsilon)
-
-
-
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% Run Matpower's solver
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% if run_matpower == 1
-%     display('--------- MATPOWER optimization ----------')
-%     opt = mpoption('OPF_FLOW_LIM', 1);
-%     results = runopf(mpc, opt);
-% 
-%     obj = results.f;
-%     display(strcat('Total cost = ', num2str(obj)));
-% end
-% uA = 7.5/100;
-% uB = 10/100;
-% uC = 20/100;
-% 20000*(5.05 + uA+uB+2*uC)
-% 
-% u = [uA, uB, uC]';
-% k = ones(3);
-% 
-% varA = (7/100)^2;
-% varB = (12/100)^2;
-% varC = (18/100)^2;
-% 
-% corelAB = 0.7;
-% corelCA = -0.5;
-% corelBC = -0.3;
-% 
-% covarAB = corelAB*sqrt(varA)*sqrt(varB);
-% covarBC = corelBC*sqrt(varC)*sqrt(varB);
-% covarCA = corelCA*sqrt(varC)*sqrt(varA);
-% 
-% tot_var = varA+varB+4*varC+2*covarAB+4*(covarCA+covarBC);
-% 20000*tot_var
-% sqrt(20000*tot_var)
-% 
-% covar_mat = [varA, covarAB, covarCA; covarAB, varB, covarBC; covarCA, covarBC, varC]
-% covar_mat2 = cat(2,covar_mat,[0,0,0]');
-% covar_mat2 = cat(1,covar_mat2,[0,0,0,0]);
-
-% % % % if strcmp(cvx_status, 'Solved') ~= 1
-% % % %     display('Problems in optimization');
-% % % % end
-% % % % 
-% % % % % display('P power')
-% % % % % display([Pg, PgMax])
-% % % % % display('Q power')
-% % % % % display([Qg, 0.6*Pg])
-% % % % % display('Line flow')
-% % % % % display([-Fmax, Pt, Pf, Fmax])
-% % % % % display('Voltage')
-% % % % % display([WMin, Vsq, WMax])
-% % % % 
-% % % % 
-% % % % 
-% % % % %display([mpc.branch(:,1), mpc.branch(:, 2), Pf, Pt, Fmax])
-% % % % %Pd
-% % % % %Pg
-% % % % NF = sum(Pd);
-% % % % 
-% % % % if ~isnan(W)
-% % % %     lambdas = sort(real(eig(W)), 1, 'descend');
-% % % %     lambda123 = lambdas(1:3);
-% % % % else
-% % % %     lambda123 = NaN;
-% % % % end
