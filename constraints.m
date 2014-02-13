@@ -192,15 +192,6 @@ c6 = WMin - Vsq';
 c7 = Pf' - line_limits;         
 c8 = - line_limits - Pt';
                     
-% gradc1 = jacobian_g(1:n, :);
-% gradc2 = jacobian_g(n+1:2*n, :);
-% gradc3 = jacobian_g(2*n+1:3*n, :);
-% gradc4 = jacobian_g(3*n+1:4*n, :);
-% gradc5 = jacobian_g(4*n+1:5*n, :);
-% gradc6 = jacobian_g(5*n+1:6*n, :);
-% gradc7 = jacobian_g(6*n+1:6*n+m, :); 
-% gradc8 = jacobian_g(6*n+1+m:6*n+2*m, :);
-
 % Gradient of Constraints
 jacobian_g = zeros(6*n + 2*m, 2*n);
 % jacobian_g = zeros(6*n, 2*n);
@@ -221,6 +212,7 @@ for kk = 1:m
     jacobian_g(6*n + m + kk,:) = -2*(exp_Tt{kk}*exp_V_k)';
 end
 
+% c = [c1; c2; c3; c4; c5; c6];
 c = [c1; c2; c3; c4; c5; c6; c7; c8]; 
 gradc = jacobian_g';
 ceq = [];
