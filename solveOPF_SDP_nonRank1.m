@@ -12,8 +12,8 @@ clear all
 close all
 clc
 
-case_num = 'case57';
-use_line_limits = 0;
+case_num = 'case14';
+use_line_limits = 1;
 %%%%%%%%%%%%
 
 display('\n');
@@ -223,7 +223,30 @@ eig_1 = lamda(1);
 R = chol(W);
 V0 = R(1, :);
 
-sprintf('Checking assertions on SDP V0')
+if use_line_limits == 1
+    lambda0 = [lam1', lam2', lam3', lam4', lam5', lam6', lam7', lam8'];
+else
+    lambda0 = [lam1', lam2', lam3', lam4', lam5', lam6'];
+end
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Run SQP relaxation
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+tic
+display('Starting SQP')
+[hess_lagrangian, objective_value, V_fin, num_iter]  = ...
+                    runSQP( V0, lambda0', case_num, use_line_limits);
+toc
+
+objective_value
+num_iter;
+V_fin
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Check if Constraints Satisfied
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%%%%%%%%%%% SDP %%%%%%%%%%%%%%%%%%
 epsilon = 10^-4;
 assert(min(real(Pg) - PgMax <= epsilon)==1)
 assert(min(PgMin - real(Pg) <= epsilon)==1)
@@ -235,20 +258,9 @@ if use_line_limits == 1
     assert(min(Pf - line_limits <= epsilon)==1)
     assert(min(-line_limits - Pt <= epsilon)==1)
 end
-sprintf('constraints are satsified with epsilon = %d', epsilon)
+sprintf('SDP: constraints are satsified with epsilon = %d', epsilon)
 
-if use_line_limits == 1
-    lambda0 = [lam1', lam2', lam3', lam4', lam5', lam6', lam7', lam8'];
-else
-    lambda0 = [lam1', lam2', lam3', lam4', lam5', lam6'];
-end
-
-[hess_lagrangian, objective_value, V_fin]  = runSQP( V0, lambda0', case_num, use_line_limits);
-objective_value
-V_fin
-
-% Checking if V_k satisfies original constraints
-display('Checking QCQP constraints with V_fin')
+%%%%%%%%%%% SQP %%%%%%%%%%%%%%%%%%
 Pinj = zeros(n,1);
 Qinj = zeros(n,1);
 Vsq = zeros(n,1);
@@ -282,4 +294,4 @@ if use_line_limits == 1
     assert(min(Pf - line_limits <= epsilon)==1)
     assert(min(-line_limits - Pt <= epsilon)==1)
 end
-sprintf('constraints satisfied with epsilon = %d', epsilon)
+sprintf('SQP: constraints satisfied with epsilon = %d', epsilon)

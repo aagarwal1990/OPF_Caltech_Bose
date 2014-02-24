@@ -1,17 +1,5 @@
-function [hess_lagrangian, objective_value, V_fin ] = runSQP( V0, lambda0, case_num, use_line_limits)
-%UNTITLED Summary of this function goes here
-%   Detailed explanation goes here
-
-% solveOPF.m
-%
-% Solves OPF through 2 methods:
-%   1. SDP relaxation
-%   2. Matpower's internal solver.
-%
-% Author: Subhonmesh Bose.
-%
-% Requires Matpower, CVX and SeDuMi.
-
+function [hess_lagrangian, objective_value, V_fin, count] = ...
+                            runSQP( V0, lambda0, case_num, use_line_limits)
 
 mpc = loadcase(case_num);
 n           = size(mpc.bus, 1);
@@ -179,130 +167,17 @@ for kk = 1:m
     exp_Tt{kk} = cat(1, top, bottom);
 end
 
-% Jacobian and Hessian for FIRST iteration
-grad_cost = zeros(2*n,1);
-for kk = 1:n
-    grad_cost = grad_cost + 2*costGen1(kk)*(exp_Phi{kk}*exp_V_k);
-end
-
-% Calculation of jacobian of lagrangian
-if use_line_limits == 1
-    jacobian_g = zeros(6*n + 2*m, 2*n);
-else
-    jacobian_g = zeros(6*n, 2*n);
-end
-
-% bus constraints segment of jacobian of lagrangian
-for kk = 1:n
-    jacobian_g(kk,:)     =  2*(exp_Phi{kk}*exp_V_k)';
-    jacobian_g(n+kk,:)   = -2*(exp_Phi{kk}*exp_V_k)';
-    jacobian_g(2*n+kk,:) =  2*(exp_Psi{kk}*exp_V_k)';
-    jacobian_g(3*n+kk,:) = -2*(exp_Psi{kk}*exp_V_k)';
-    jacobian_g(4*n+kk,:) =  2*exp_V_k';
-    jacobian_g(5*n+kk,:) = -2*exp_V_k';
-end
-
-% branch constraints segment of jacobian of lagrangian
-if use_line_limits == 1
-    for kk = 1:m
-        jacobian_g(6*n+kk,:)       =  2*(exp_Ff{kk}*exp_V_k)';
-        jacobian_g(6*n + m + kk,:) = -2*(exp_Tt{kk}*exp_V_k)';
-    end
-end
-
-grad_lagrangian = grad_cost' + lambda_k' * jacobian_g;
-    
-% Calculation of hessian of lagrangian
-hess_lagrangian = zeros(2*n, 2*n);
-
-% generation cost segment of lagrangian
-for kk = 1:n
-    hess_lagrangian = hess_lagrangian ...
-            + 2 * costGen1(kk) * exp_Phi{kk};
-end
-
-% bus constraints segment of hessian of lagrangian
-for kk = 1:n
-    hess_lagrangian = hess_lagrangian ...
-                        + 2 * lambda_k(kk, :)     * exp_Phi{kk} ...
-                        - 2 * lambda_k(n+kk, :)   * exp_Phi{kk} ...
-                        + 2 * lambda_k(2*n+kk, :) * exp_Psi{kk} ...
-                        - 2 * lambda_k(3*n+kk, :) * exp_Psi{kk} ...
-                        + 2 * lambda_k(4*n+kk, :) * eye(2*n)    ...
-                        - 2 * lambda_k(5*n+kk, :) * eye(2*n);
-end
-
-% branch constraints segment of hessian of lagrangian
-if use_line_limits == 1
-    for kk = 1:m
-         hess_lagrangian = hess_lagrangian ...
-                          + 2*lambda_k(6*n+kk, :)   * exp_Ff{kk} ...
-                          - 2*lambda_k(6*n+m+kk, :) * exp_Tt{kk};
-    end
-end
-
-V_fin = ones(n, 1) * 9e+99;
-% get objective value 
-objective_value = ones(n, 1) * 9e+99;
+% Initialize objective value and V_fin
+V_fin = ones(n, 1) * Inf;
+objective_value = ones(n, 1) * Inf;
 
 while and(iter_diff > 10^-4, count < 10)
-    count = count + 1
-    lambda_neg_one = lambda_k;
-
-    cvx_begin quiet
-        variables exp_V(2*n) V(n) W(n, n) obj;
-        variables Pg(n) Qg(n) Pinj(n) Qinj(n) Vsq(n) aux(n); 
-        variables Pf(m) Pt(m);
-        dual variables lam1 lam2 lam3 lam4 lam5 lam6 lam7 lam8;
-        minimise obj;
-        subject to
-        
-            % objective function
-            obj >= 1/2 * quad_form((exp_V-exp_V_k), hess_lagrangian) + ...
-                    (grad_lagrangian * (exp_V-exp_V_k));
-                    
-            for kk = 1:n
-                Pinj(kk) == exp_V_k'* exp_Phi{kk} * exp_V_k ;
-                Qinj(kk) == exp_V_k'* exp_Psi{kk} * exp_V_k;
-                Vsq(kk)  == (exp_V_k(kk))^2 + (exp_V_k(kk + n))^2;
-            end
-
-            Pinj == Pg - Pd;
-            Qinj == Qg - Qd;
-            
-            % Line limits
-            for bb = 1:m
-                Pf(bb) == exp_V_k' * exp_Ff{bb} * exp_V_k;
-                Pt(bb) == exp_V_k' * exp_Tt{bb} * exp_V_k;
-            end
-            
-            % Contraints
-            lam1 : Pg - PgMax + jacobian_g(1:n, :)      *(exp_V-exp_V_k)<= 0;
-            lam2 : PgMin - Pg + jacobian_g(n+1:2*n, :)  *(exp_V-exp_V_k)<= 0;
-            lam3 : Qg - QgMax + jacobian_g(2*n+1:3*n, :)*(exp_V-exp_V_k)<= 0;
-            lam4 : QgMin - Qg + jacobian_g(3*n+1:4*n, :)*(exp_V-exp_V_k)<= 0;
-            lam5 : Vsq - WMax + jacobian_g(4*n+1:5*n, :)*(exp_V-exp_V_k)<= 0;
-            lam6 : WMin - Vsq + jacobian_g(5*n+1:6*n, :)*(exp_V-exp_V_k)<= 0;
-            if use_line_limits == 1
-                lam7 : Pf - line_limits + ...
-                                    jacobian_g(6*n+1:6*n+m, :)*(exp_V-exp_V_k) <= 0;
-                lam8 : - line_limits - Pt + ...
-                                    jacobian_g(6*n+1+m:6*n+2*m, :)*(exp_V-exp_V_k)<= 0;
-            end
-    cvx_end
+    count = count + 1;
     
-    iter_diff = norm(exp_V - exp_V_k);
-    
-    % BFGS Hessian Update - define necessary variables   
-    exp_V_k = exp_V;
-    
-    if use_line_limits == 1
-        lambda_k = [lam1', lam2', lam3', lam4', lam5', lam6', lam7', lam8']';
-    else
-        lambda_k = [lam1', lam2', lam3', lam4', lam5', lam6']';
-    end
-    
-    % Jacobian and Hessian for FIRST iteration
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
+    % 1) Get Jacobian of Lagrangian 
+    % 2) Get Hessian of Lagrangian 
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     grad_cost = zeros(2*n,1);
     for kk = 1:n
         grad_cost = grad_cost + 2*costGen1(kk)*(exp_Phi{kk}*exp_V_k);
@@ -362,43 +237,81 @@ while and(iter_diff > 10^-4, count < 10)
                               + 2*lambda_k(6*n+kk, :)   * exp_Ff{kk} ...
                               - 2*lambda_k(6*n+m+kk, :) * exp_Tt{kk};
         end
-    end 
+    end
+    
+    % check if hessian is not psd -> switch back to old hessian
     [R P] = chol(hess_lagrangian);
-    %if hessian is psd
     if P ~= 0
-        lambda_k = lambda_neg_one;
-        
-        % Calculation of hessian of lagrangian
-        hess_lagrangian = zeros(2*n, 2*n);
-
-        % generation cost segment of lagrangian
-        for kk = 1:n
-            hess_lagrangian = hess_lagrangian ...
-                    + 2 * costGen1(kk) * exp_Phi{kk};
-        end
-
-        % bus constraints segment of hessian of lagrangian
-        for kk = 1:n
-            hess_lagrangian = hess_lagrangian ...
-                                + 2 * lambda_neg_one(kk, :)     * exp_Phi{kk} ...
-                                - 2 * lambda_neg_one(n+kk, :)   * exp_Phi{kk} ...
-                                + 2 * lambda_neg_one(2*n+kk, :) * exp_Psi{kk} ...
-                                - 2 * lambda_neg_one(3*n+kk, :) * exp_Psi{kk} ...
-                                + 2 * lambda_neg_one(4*n+kk, :) * eye(2*n)    ...
-                                - 2 * lambda_neg_one(5*n+kk, :) * eye(2*n);
-        end
-
-        % branch constraints segment of hessian of lagrangian
-        if use_line_limits == 1
-            for kk = 1:m
-                 hess_lagrangian = hess_lagrangian ...
-                                  + 2*lambda_neg_one(6*n+kk, :)   * exp_Ff{kk} ...
-                                  - 2*lambda_neg_one(6*n+m+kk, :) * exp_Tt{kk};
-            end
-        end 
+        lambda_k = lambda_last_iter;
+        hess_lagrangian = hess_last_iter;
     end 
     
+    cvx_begin quiet
+        variables exp_V(2*n) V(n) W(n, n) obj;
+        variables Pg(n) Qg(n) Pinj(n) Qinj(n) Vsq(n) aux(n); 
+        variables Pf(m) Pt(m);
+        dual variables lam1 lam2 lam3 lam4 lam5 lam6 lam7 lam8;
+        minimise obj;
+        subject to
+        
+            % objective function
+            obj >= 1/2 * quad_form((exp_V-exp_V_k), hess_lagrangian) + ...
+                    (grad_lagrangian * (exp_V-exp_V_k));
+                    
+            for kk = 1:n
+                Pinj(kk) == exp_V_k'* exp_Phi{kk} * exp_V_k ;
+                Qinj(kk) == exp_V_k'* exp_Psi{kk} * exp_V_k;
+                Vsq(kk)  == (exp_V_k(kk))^2 + (exp_V_k(kk + n))^2;
+            end
+
+            Pinj == Pg - Pd;
+            Qinj == Qg - Qd;
+            
+            % Line limits
+            for bb = 1:m
+                Pf(bb) == exp_V_k' * exp_Ff{bb} * exp_V_k;
+                Pt(bb) == exp_V_k' * exp_Tt{bb} * exp_V_k;
+            end
+            
+            % Contraints
+            lam1 : Pg - PgMax + jacobian_g(1:n, :)      *(exp_V-exp_V_k)<= 0;
+            lam2 : PgMin - Pg + jacobian_g(n+1:2*n, :)  *(exp_V-exp_V_k)<= 0;
+            lam3 : Qg - QgMax + jacobian_g(2*n+1:3*n, :)*(exp_V-exp_V_k)<= 0;
+            lam4 : QgMin - Qg + jacobian_g(3*n+1:4*n, :)*(exp_V-exp_V_k)<= 0;
+            lam5 : Vsq - WMax + jacobian_g(4*n+1:5*n, :)*(exp_V-exp_V_k)<= 0;
+            lam6 : WMin - Vsq + jacobian_g(5*n+1:6*n, :)*(exp_V-exp_V_k)<= 0;
+            if use_line_limits == 1
+                lam7 : Pf - line_limits + ...
+                                    jacobian_g(6*n+1:6*n+m, :)*(exp_V-exp_V_k) <= 0;
+                lam8 : - line_limits - Pt + ...
+                                    jacobian_g(6*n+1+m:6*n+2*m, :)*(exp_V-exp_V_k)<= 0;
+            end
+    cvx_end
+    
+    % Check if convergence condition met
+    iter_diff = norm(exp_V - exp_V_k); 
+    
+    % Update new voltage % lambda values
+    exp_V_k = exp_V;
+    
+    if use_line_limits == 1
+        lambda_k = [lam1', lam2', lam3', lam4', lam5', lam6', lam7', lam8']';
+    else
+        lambda_k = [lam1', lam2', lam3', lam4', lam5', lam6']';
+    end
+    lambda_last_iter = lambda_k;
+    
+    hess_last_iter = hess_lagrangian;
+        
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
+    % 1) Check if current V_k minimizes objective value 
+    % 2) Satisfies constraint set
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    
     V_cand = complex(exp_V_k(1:n), exp_V_k(n+1:2*n));
+    
+    % Set up necessary variables to check constraints 
+    % and get objective value
     
     Pinj = zeros(n,1);
     Qinj = zeros(n,1);
@@ -420,6 +333,7 @@ while and(iter_diff > 10^-4, count < 10)
         Pt(bb) = V_cand' * Tt{bb}* V_cand;
     end
     
+    % Get candidate objective value
     cand_objective_value = zeros(n, 1);
     for kk = 1:n
         cand_objective_value(kk) = costGen2(kk) * Pg(kk)^2 ...
@@ -429,7 +343,7 @@ while and(iter_diff > 10^-4, count < 10)
 
     cand_objective_value = real(sum(cand_objective_value) * conditionObj);
     
-    % Contraints
+    % Check Contraints met and objective value minimized
     V_fin_old = V_fin;
     objective_value_old = objective_value;
     epsilon = 10^-4;
