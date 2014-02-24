@@ -143,6 +143,7 @@ exp_Phi = {};
 exp_Psi = {};
 exp_Ff  = {};
 exp_Tt  = {};
+
 for kk = 1:n
     top         = cat(2, real(Phi{kk}), -imag(Phi{kk}));
     bottom      = cat(2, imag(Phi{kk}),  real(Phi{kk}));
@@ -153,15 +154,15 @@ for kk = 1:n
     exp_Psi{kk} = cat(1, top, bottom);
 end
 
-for kk = 1:m
-    top        = cat(2, real(Ff{kk}), -imag(Ff{kk}));
-    bottom     = cat(2, imag(Ff{kk}),  real(Ff{kk}));
-    exp_Ff{kk} = cat(1, top, bottom);
-    
-    top        = cat(2, real(Tt{kk}), -imag(Tt{kk}));
-    bottom     = cat(2, imag(Tt{kk}),  real(Tt{kk}));
-    exp_Tt{kk} = cat(1, top, bottom);
-end
+% for kk = 1:m
+%     top        = cat(2, real(Ff{kk}), -imag(Ff{kk}));
+%     bottom     = cat(2, imag(Ff{kk}),  real(Ff{kk}));
+%     exp_Ff{kk} = cat(1, top, bottom);
+%     
+%     top        = cat(2, real(Tt{kk}), -imag(Tt{kk}));
+%     bottom     = cat(2, imag(Tt{kk}),  real(Tt{kk}));
+%     exp_Tt{kk} = cat(1, top, bottom);
+% end
 
 for kk = 1:n
     Pinj(kk) = exp_V_k'* exp_Phi{kk} * exp_V_k ;

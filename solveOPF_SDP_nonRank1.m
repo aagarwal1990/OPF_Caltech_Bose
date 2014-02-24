@@ -161,7 +161,7 @@ tic
 
 display('--------- SDP calculation ----------')
 
-cvx_begin 
+cvx_begin quiet
     variables Pg(n) Qg(n) Pinj(n) Qinj(n) Vsq(n) aux(n); 
     variables Pf(m) Pt(m);
     dual variables lam1 lam2 lam3 lam4 lam5 lam6 lam7 lam8;
@@ -196,8 +196,8 @@ cvx_begin
         lam4 : QgMin - Qg <= 0;
         lam5 : Vsq - WMax <= 0;
         lam6 : WMin - Vsq <= 0;
-        lam7 : Pf - line_limits <= 0;
-        lam8 : -line_limits - Pt <= 0;
+%         lam7 : Pf - line_limits <= 0;
+%         lam8 : -line_limits - Pt <= 0;
         
         W == hermitian_semidefinite( n );
 cvx_end
@@ -219,15 +219,15 @@ maxEigRatio = max(eig_lst(eig_lst ~= max_eig))/max_eig
 eig_1 = lamda(1);
 R = chol(W);
 V0 = R(1, :);
-% 
-% sprintf('Checking assertions on SDP V0')
-% epsilon = 10^-4;
-% assert(min(real(Pg) - PgMax <= epsilon)==1)
-% assert(min(PgMin - real(Pg) <= epsilon)==1)
-% assert(min(real(Qg) - QgMax <= epsilon)==1)
-% assert(min(QgMin - real(Qg) <= epsilon)==1)
-% assert(min(Vsq - WMax <= epsilon)==1)
-% assert(min(WMin - Vsq <= epsilon)==1)
+
+sprintf('Checking assertions on SDP V0')
+epsilon = 10^-4;
+assert(min(real(Pg) - PgMax <= epsilon)==1)
+assert(min(PgMin - real(Pg) <= epsilon)==1)
+assert(min(real(Qg) - QgMax <= epsilon)==1)
+assert(min(QgMin - real(Qg) <= epsilon)==1)
+assert(min(Vsq - WMax <= epsilon)==1)
+assert(min(WMin - Vsq <= epsilon)==1)
 % % assert(min(Pf - line_limits <= epsilon)==1)
 % % assert(min(-line_limits - Pt <= epsilon)==1)
 % sprintf('constraints are satsified with epsilon = %d', epsilon)
@@ -239,7 +239,7 @@ V0 = R(1, :);
 V_k = V0';
 exp_V_k = cat(1,real(V_k), imag(V_k));
 
-options = optimset('GradObj','on','GradConstr','on', 'Display', 'iter', 'Algorithm','active-set');
+options = optimset('GradObj','on','GradConstr','on', 'Display', 'iter', 'Algorithm','sqp');
 [x,fval,exitflag,output,lambda,grad,hessian] = ...
     fmincon('objfun',exp_V_k,[],[],[],[],[],[],'constraints', options);
 
@@ -250,11 +250,11 @@ objective_value = sum(fval) * conditionObj
 % % Manual Check of Feasibility Constraints
 % %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-lambda0 = [lam1', lam2', lam3', lam4', lam5', lam6', lam7', lam8'];
-
-[hess_lagrangian, objective_value, V_fin]  = runSQP( V0, lambda0', case_num );
-objective_value
-V_fin
+% lambda0 = [lam1', lam2', lam3', lam4', lam5', lam6']%, lam7', lam8'];
+% 
+% [hess_lagrangian, objective_value, V_fin]  = runSQP( V0, lambda0', case_num );
+% objective_value
+% V_fin
 
 % Checking if V_k satisfies original constraints
 display('Checking QCQP constraints with V_fin')
@@ -286,6 +286,6 @@ assert(min(real(Qg) - QgMax <= epsilon)==1)
 assert(min(QgMin - real(Qg) <= epsilon)==1)
 assert(min(Vsq - WMax <= epsilon)==1)
 assert(min(WMin - Vsq <= epsilon)==1)
-assert(min(Pf - line_limits <= epsilon)==1)
-assert(min(-line_limits - Pt <= epsilon)==1)
+% assert(min(Pf - line_limits <= epsilon)==1)
+% assert(min(-line_limits - Pt <= epsilon)==1)
 sprintf('constraints satisfied with epsilon = %d', epsilon)

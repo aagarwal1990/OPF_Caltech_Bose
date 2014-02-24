@@ -177,10 +177,10 @@ Qg = Qinj' + Qd;
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % Line limits
-for bb = 1:m
-    Pf(bb) = exp_V_k' * exp_Ff{bb} * exp_V_k;
-    Pt(bb) = exp_V_k' * exp_Tt{bb} * exp_V_k;
-end
+% for bb = 1:m
+%     Pf(bb) = exp_V_k' * exp_Ff{bb} * exp_V_k;
+%     Pt(bb) = exp_V_k' * exp_Tt{bb} * exp_V_k;
+% end
 
 % Contraints and Gradient of Constraints
 c1 = Pg - PgMax;
@@ -189,8 +189,8 @@ c3 = Qg - QgMax;
 c4 = QgMin - Qg;
 c5 = Vsq' - WMax; 
 c6 = WMin - Vsq'; 
-c7 = Pf' - line_limits;         
-c8 = - line_limits - Pt';
+% c7 = Pf' - line_limits;         
+% c8 = - line_limits - Pt';
                     
 % Gradient of Constraints
 jacobian_g = zeros(6*n + 2*m, 2*n);
@@ -207,13 +207,13 @@ for kk = 1:n
 end
 
 % branch constraints segment of jacobian of lagrangian
-for kk = 1:m
-    jacobian_g(6*n+kk,:)       =  2*(exp_Ff{kk}*exp_V_k)';
-    jacobian_g(6*n + m + kk,:) = -2*(exp_Tt{kk}*exp_V_k)';
-end
+% for kk = 1:m
+%     jacobian_g(6*n+kk,:)       =  2*(exp_Ff{kk}*exp_V_k)';
+%     jacobian_g(6*n + m + kk,:) = -2*(exp_Tt{kk}*exp_V_k)';
+% end
 
-% c = [c1; c2; c3; c4; c5; c6];
-c = [c1; c2; c3; c4; c5; c6; c7; c8]; 
+c = [c1; c2; c3; c4; c5; c6];
+% c = [c1; c2; c3; c4; c5; c6; c7; c8]; 
 gradc = jacobian_g';
 ceq = [];
 gradceq = [];
