@@ -250,6 +250,8 @@ while and(iter_diff > 10^-4, count < 10)
     sum(eig(hess_lagrangian)<0)
     
     q_k_neg_one = grad_lagrangian;
+    hess_lagrangian_prev = hess_lagrangian;
+    
     
     cvx_begin 
         variables exp_V(2*n) V(n) W(n, n) obj;
@@ -300,6 +302,7 @@ while and(iter_diff > 10^-4, count < 10)
     s_k = exp_V - exp_V_k;
     
     exp_V_k = exp_V;
+    lambda_prev = lambda_k;
     if use_line_limits == 1
         lambda_k = [lam1', lam2', lam3', lam4', lam5', lam6', lam7', lam8']';
     else
@@ -345,10 +348,67 @@ while and(iter_diff > 10^-4, count < 10)
                       + (q_k' * q_k) / (q_k * s_k) ...
                       - (hess_neg_one * s_k * s_k' * hess_neg_one') ...
                       / (s_k' * hess_neg_one * s_k);
+                  
+    if sum(eig(hess_lagrangian)<0) > 0
+        display('Going back to old lambda')
+        lambda_k = (lambda_prev + lambda_k)/2;
+        grad_cost = zeros(2*n,1);
+        for kk = 1:n
+            grad_cost = grad_cost + 2*costGen1(kk)*(exp_Phi{kk}*exp_V_k);
+        end
+%         Calculation of jacobian of lagrangian
+        if use_line_limits == 1
+            jacobian_g = zeros(6*n + 2*m, 2*n);
+        else
+            jacobian_g = zeros(6*n, 2*n);
+        end
+
+%         bus constraints segment of jacobian of lagrangian
+        for kk = 1:n
+            jacobian_g(kk,:)     =  2*(exp_Phi{kk}*exp_V_k)';
+            jacobian_g(n+kk,:)   = -2*(exp_Phi{kk}*exp_V_k)';
+            jacobian_g(2*n+kk,:) =  2*(exp_Psi{kk}*exp_V_k)';
+            jacobian_g(3*n+kk,:) = -2*(exp_Psi{kk}*exp_V_k)';
+            jacobian_g(4*n+kk,:) =  2*exp_V_k';
+            jacobian_g(5*n+kk,:) = -2*exp_V_k';
+        end
+
+%         branch constraints segment of jacobian of lagrangian
+        if use_line_limits == 1
+            for kk = 1:m
+                jacobian_g(6*n+kk,:)       =  2*(exp_Ff{kk}*exp_V_k)';
+                jacobian_g(6*n + m + kk,:) = -2*(exp_Tt{kk}*exp_V_k)';
+            end
+        end
+
+%         updated jocobian of lagrangian
+        grad_lagrangian = grad_cost' + lambda_k' * jacobian_g;
+
+%         update hessian of lagrangian through BFGS update
+        q_k = grad_lagrangian - q_k_neg_one;
+        hess_neg_one = hess_lagrangian;
+        hess_lagrangian = hess_neg_one ...
+                          + (q_k' * q_k) / (q_k * s_k) ...
+                          - (hess_neg_one * s_k * s_k' * hess_neg_one') ...
+                          / (s_k' * hess_neg_one * s_k);
+
+    end
+        
+    
 end
 
 % get objective value 
 objective_value = zeros(n, 1);
+
+for kk = 1:n
+    Pinj(kk) = exp_V_k'* exp_Phi{kk} * exp_V_k ;
+    Qinj(kk) = exp_V_k'* exp_Psi{kk} * exp_V_k;
+    Vsq(kk)  = (exp_V_k(kk))^2 + (exp_V_k(kk + n))^2;
+end
+
+Pg = Pinj + Pd;
+Qg = Qinj + Qd;
+
 for kk = 1:n
    objective_value(kk) = costGen2(kk) * Pg(kk)^2 ...
                        + costGen1(kk) * Pg(kk) ...
