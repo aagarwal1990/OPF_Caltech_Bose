@@ -12,8 +12,8 @@ clear all
 close all
 clc
 
-case_num = 'case14';
-use_line_limits = 1;
+case_num = 'case57';
+use_line_limits = 0;
 %%%%%%%%%%%%
 
 display('\n');
@@ -278,6 +278,8 @@ assert(min(real(Qg) - QgMax <= epsilon)==1)
 assert(min(QgMin - real(Qg) <= epsilon)==1)
 assert(min(Vsq - WMax <= epsilon)==1)
 assert(min(WMin - Vsq <= epsilon)==1)
-assert(min(Pf - line_limits <= epsilon)==1)
-assert(min(-line_limits - Pt <= epsilon)==1)
+if use_line_limits == 1
+    assert(min(Pf - line_limits <= epsilon)==1)
+    assert(min(-line_limits - Pt <= epsilon)==1)
+end
 sprintf('constraints satisfied with epsilon = %d', epsilon)

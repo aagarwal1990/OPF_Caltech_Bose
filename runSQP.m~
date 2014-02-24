@@ -241,11 +241,8 @@ if use_line_limits == 1
     end
 end
 
-V_fin = ones(n, 1) * 9e+99;
-% get objective value 
-objective_value = ones(n, 1) * 9e+99;
-
-while and(iter_diff > 10^-4, count < 10)
+V_fin = ones(n, 1) * 9e+999;
+while and(iter_diff > 10^-4, count < 100)
     count = count + 1
     lambda_neg_one = lambda_k;
 
@@ -411,9 +408,10 @@ while and(iter_diff > 10^-4, count < 10)
         Qinj(kk) = V_cand' * Psi{kk} * V_cand;
         Vsq(kk)  = abs(V_cand(kk));
     end
+
     Pg = Pinj + Pd;
     Qg = Qinj + Qd;
-
+    
     % Line limits
     for bb = 1:m
         Pf(bb) = V_cand' * Ff{bb}* V_cand;
@@ -426,12 +424,10 @@ while and(iter_diff > 10^-4, count < 10)
                               + costGen1(kk) * Pg(kk) ...
                               + costGen0(kk);
     end
+    cand_objective_value = sum(cand_objective_value) * conditionObj;
 
-    cand_objective_value = real(sum(cand_objective_value) * conditionObj);
-    
     % Contraints
     V_fin_old = V_fin;
-    objective_value_old = objective_value;
     epsilon = 10^-4;
     if (min(real(Pg) - PgMax <= epsilon)==1) & ...       
        (min(PgMin - real(Pg) <= epsilon)==1) & ... 
@@ -439,15 +435,38 @@ while and(iter_diff > 10^-4, count < 10)
        (min(QgMin - real(Qg) <= epsilon)==1) & ...
        (min(Vsq - WMax <= epsilon)==1)       & ...
        (min(WMin - Vsq <= epsilon)==1)       & ...
-       (cand_objective_value <= objective_value)
+       (cand_objective_value <= V_fin)
             V_fin = V_cand;
-            objective_value = cand_objective_value;
     end
     if use_line_limits == 1 & ...  
        (min(Pf - line_limits <= epsilon) ~=1) & ...  
        (min(-line_limits - Pt <= epsilon)~=1)
             V_fin = V_fin_old;
-            objective_value = objective_value_old;
     end        
 end
+
+% get objective value 
+objective_value = zeros(n, 1);
+
+Pinj = zeros(n,1);
+Qinj = zeros(n,1);
+Vsq = zeros(n,1);
+
+for kk = 1:n
+    Pinj(kk) = V_fin' * Phi{kk} * V_fin;
+    Qinj(kk) = V_fin' * Psi{kk} * V_fin;
+    Vsq(kk)  = abs(V_fin(kk));
+end
+    
+Pg = Pinj + Pd;
+Qg = Qinj + Qd;
+
+for kk = 1:n
+   objective_value(kk) = costGen2(kk) * Pg(kk)^2 ...
+                       + costGen1(kk) * Pg(kk) ...
+                       + costGen0(kk);
+end
+
+objective_value = sum(objective_value) * conditionObj;
+
 end
