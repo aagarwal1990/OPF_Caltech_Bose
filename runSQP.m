@@ -19,7 +19,6 @@ line_limits(15) = 0.5000;
 V_k = V0';
 iter_diff = 100;
 lambda_k = lambda0;
-lambda_k = lambda0;
 count = 0;
 exp_V_k = cat(1,real(V_k), imag(V_k));
 exp_Phi = {};
@@ -46,30 +45,20 @@ for kk = 1:m
     exp_Tt{kk} = cat(1, top, bottom);
 end
 
-% Initialize objective value and V_fin
-V_fin = ones(n, 1) * Inf;
-objective_value = ones(n, 1) * Inf;
-
-while and(iter_diff > 10^-4, count < 10)
-    count = count + 1;
-    
-    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
-    % 1) Get Jacobian of Lagrangian 
-    % 2) Get Hessian of Lagrangian 
-    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    [jacobian_g, grad_lagrangian, hess_lagrangian] = ...
+% Initialize Hessian of Lagrangian
+[jacobian_g, grad_lagrangian, hess_lagrangian] = ...
             get_grad_hess_lagr(costGen0, costGen1, costGen2, ...
                                exp_Phi, exp_Psi, exp_Ff, exp_Tt, ...
                                exp_V_k, lambda_k, n, m, use_line_limits);
+                           
+% Initialize objective value and V_fin
+V_fin = ones(n, 1) * Inf;
+objective_value = Inf;
 
-    
-    % check if hessian is not psd -> switch back to old hessian
-    % Note: Still computing grad of lagrangian with new lambda
-    [R P] = chol(hess_lagrangian);
-    if P ~= 0
-        lambda_k = lambda_last_iter;
-        hess_lagrangian = hess_last_iter;
-    end 
+while and(iter_diff > 10^-4, count < 10)
+    count = count + 1;
+    lambda_last_iter = lambda_k;
+    hess_last_iter = hess_lagrangian;
     
     cvx_begin quiet
         variables exp_V(2*n) V(n) W(n, n) obj;
@@ -118,16 +107,43 @@ while and(iter_diff > 10^-4, count < 10)
     
     % Update new voltage % lambda values
     exp_V_k = exp_V;
-    
     if use_line_limits == 1
         lambda_k = [lam1', lam2', lam3', lam4', lam5', lam6', lam7', lam8']';
     else
         lambda_k = [lam1', lam2', lam3', lam4', lam5', lam6']';
     end
-    lambda_last_iter = lambda_k;
     
-    hess_last_iter = hess_lagrangian;
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
+    % 1) Get Jacobian of Lagrangian 
+    % 2) Get Hessian of Lagrangian 
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    alpha = 0;
+    trial = 0;
+    notPSD = 1;
+    while and(trial < 10, notPSD)
+        lambda_k = lambda_k + (1 - alpha) * (lambda_k - lambda_last_iter);
+        [jacobian_g, grad_lagrangian, hess_lagrangian] = ...
+            get_grad_hess_lagr(costGen0, costGen1, costGen2, ...
+                               exp_Phi, exp_Psi, exp_Ff, exp_Tt, ...
+                               exp_V_k, lambda_k, n, m, use_line_limits);
+                           
+        [R P] = chol(hess_lagrangian);
+        notPSD = P;
         
+        if notPSD
+            alpha = 0.5 * alpha;
+        end
+        trial = trial + 1;
+    end
+    
+    if and(trial == 10, notPSD)
+        lambda_k = lambda_last_iter;
+        [jacobian_g, grad_lagrangian, hess_lagrangian] = ...
+            get_grad_hess_lagr(costGen0, costGen1, costGen2, ...
+                               exp_Phi, exp_Psi, exp_Ff, exp_Tt, ...
+                               exp_V_k, lambda_k, n, m, use_line_limits);
+    end
+            
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
     % 1) Check if current V_k minimizes objective value 
     % 2) Satisfies constraint set
@@ -167,7 +183,6 @@ while and(iter_diff > 10^-4, count < 10)
     end
 
     cand_objective_value = real(sum(cand_objective_value) * conditionObj);
-    
     % Check Contraints met and objective value minimized
     V_fin_old = V_fin;
     objective_value_old = objective_value;
@@ -187,6 +202,11 @@ while and(iter_diff > 10^-4, count < 10)
        (min(-line_limits - Pt <= epsilon)~=1)
             V_fin = V_fin_old;
             objective_value = objective_value_old;
-    end        
+    end
+    
+    count
+    trial
+    cand_objective_value
+    objective_value
 end
 end

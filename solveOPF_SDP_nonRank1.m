@@ -13,7 +13,7 @@ close all
 clc
 
 case_num = 'case14';
-use_line_limits = 1;
+use_line_limits = 0;
 [PgMax, PgMin, QgMax, QgMin, Pd, Qd, Fmax, conditionObj, costGen2, ...
  costGen1, costGen0, WMax, WMin, Phi, Psi, JJ, Ff, Tt, n, m] ...
 = setUpOptimVar(case_num);
@@ -35,7 +35,7 @@ tic
 
 display('--------- SDP calculation ----------')
 
-cvx_begin 
+cvx_begin quiet
     variables Pg(n) Qg(n) Pinj(n) Qinj(n) Vsq(n) aux(n); 
     variables Pf(m) Pt(m);
     dual variables lam1 lam2 lam3 lam4 lam5 lam6 lam7 lam8;
