@@ -5,6 +5,7 @@ function [jacobian_g, grad_lagrangian, hess_lagrangian] = ...
                    
 grad_cost = zeros(2*n,1);
 for kk = 1:n
+    % NOTE: costGen2 being IGNORED!!
     grad_cost = grad_cost + 2*costGen1(kk)*(exp_Phi{kk}*exp_V_k);
 end
 
