@@ -117,32 +117,68 @@ while and(iter_diff > 10^-4, count < 10)
     % 1) Get Jacobian of Lagrangian 
     % 2) Get Hessian of Lagrangian 
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    alpha = 0;
-    trial = 0;
-    notPSD = 1;
-    while and(trial < 10, notPSD)
-        lambda_k = lambda_k + (1 - alpha) * (lambda_k - lambda_last_iter);
-        [jacobian_g, grad_lagrangian, hess_lagrangian] = ...
-            get_grad_hess_lagr(costGen0, costGen1, costGen2, ...
-                               exp_Phi, exp_Psi, exp_Ff, exp_Tt, ...
-                               exp_V_k, lambda_k, n, m, use_line_limits);
-                           
-        [R P] = chol(hess_lagrangian);
-        notPSD = P;
-        
-        if notPSD
-            alpha = 0.5 * alpha;
-        end
-        trial = trial + 1;
+%     alpha = 0;
+%     trial = 0;
+%     notPSD = 1;
+%     while and(trial < 10, notPSD)
+%         lambda_k = lambda_k + (1 - alpha) * (lambda_k - lambda_last_iter);
+%         [jacobian_g, grad_lagrangian, hess_lagrangian] = ...
+%             get_grad_hess_lagr(costGen0, costGen1, costGen2, ...
+%                                exp_Phi, exp_Psi, exp_Ff, exp_Tt, ...
+%                                exp_V_k, lambda_k, n, m, use_line_limits);
+%                            
+%         [R P] = chol(hess_lagrangian);
+%         notPSD = P;
+%         
+%         if notPSD
+%             alpha = 0.5 * alpha;
+%         end
+%         trial = trial + 1;
+%     end
+%     
+%     if and(trial == 10, notPSD)
+%         lambda_k = lambda_last_iter;
+%         [jacobian_g, grad_lagrangian, hess_lagrangian] = ...
+%             get_grad_hess_lagr(costGen0, costGen1, costGen2, ...
+%                                exp_Phi, exp_Psi, exp_Ff, exp_Tt, ...
+%                                exp_V_k, lambda_k, n, m, use_line_limits);
+%     end
+    
+    if use_line_limits == 1
+        cvx_begin quiet
+        variables lambda_trial(6*n + 2*m) hess_lagrangian(2*n, 2*n) t;
+        maximise t;
+        subject to
+
+            0 <= t <= 1;
+            lambda_trial == lambda_k + (1 - t) * (lambda_k - lambda_last_iter);
+
+            [jacobian_g, grad_lagrangian, hess_lagrangian] == ...
+                get_grad_hess_lagr(costGen0, costGen1, costGen2, ...
+                                   exp_Phi, exp_Psi, exp_Ff, exp_Tt, ...
+                                   exp_V_k, lambda_trial, n, m, use_line_limits);
+                               
+            hess_lagrangian == positive_semidefinite( 2*n )
+        cvx_end
+    else
+        cvx_begin quiet
+        variables lambda_trial(6*n) hess_lagrangian(2*n, 2*n) t;
+        maximise t;
+        subject to
+
+            0 <= t <= 1;
+            lambda_trial == lambda_k + (1 - t) * (lambda_k - lambda_last_iter);
+
+            [jacobian_g grad_lagrangian hess_lagrangian] == ...
+                get_grad_hess_lagr(costGen0, costGen1, costGen2, ...
+                                   exp_Phi, exp_Psi, exp_Ff, exp_Tt, ...
+                                   exp_V_k, lambda_trial, n, m, use_line_limits);
+                               
+            hess_lagrangian == positive_semidefinite( 2*n )
+            
+        cvx_end
     end
     
-    if and(trial == 10, notPSD)
-        lambda_k = lambda_last_iter;
-        [jacobian_g, grad_lagrangian, hess_lagrangian] = ...
-            get_grad_hess_lagr(costGen0, costGen1, costGen2, ...
-                               exp_Phi, exp_Psi, exp_Ff, exp_Tt, ...
-                               exp_V_k, lambda_k, n, m, use_line_limits);
-    end
             
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
     % 1) Check if current V_k minimizes objective value 
