@@ -49,7 +49,7 @@ end
 V_fin = ones(n, 1) * Inf;
 objective_value = ones(n, 1) * Inf;
 
-while and(iter_diff > 10^-4, count < 500)
+while and(iter_diff > n * 10^-4, count < 10)
     count = count + 1
     
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
@@ -75,6 +75,7 @@ while and(iter_diff > 10^-4, count < 500)
         variables Pg(n) Qg(n) Pinj(n) Qinj(n) Vsq(n) aux(n); 
         variables Pf(m) Pt(m);
         dual variables lam1 lam2 lam3 lam4 lam5 lam6 lam7 lam8;
+        cvx_solver sedumi
         minimise obj;
         subject to
         
@@ -187,5 +188,6 @@ while and(iter_diff > 10^-4, count < 500)
             V_fin = V_fin_old;
             objective_value = objective_value_old;
     end        
+    
 end
 end

@@ -23,7 +23,6 @@ line_limits = ones(m, 1) * 100;
 line_limits(14) = -0.995;
 % Impose line limit on Branch (7,9)
 line_limits(15) = 0.5000;
-
 % start time
 tic
 
@@ -40,7 +39,7 @@ cvx_begin
     dual variables lam1 lam2 lam3 lam4 lam5 lam6 lam7 lam8;
     variable W(n, n) hermitian
     minimize sum(aux)
-%     cvx_solver sedumi
+    cvx_solver sedumi
     subject to
         
         
@@ -101,13 +100,15 @@ a;
 eig_1 = lamda(1);
 R = chol(W);
 V0 = R(1, :);
-V0';
 
 if use_line_limits == 1
     lambda0 = [lam1', lam2', lam3', lam4', lam5', lam6', lam7', lam8'];
 else
     lambda0 = [lam1', lam2', lam3', lam4', lam5', lam6'];
 end
+
+% file_name = strcat(case_num, 'nonRank1_vars.mat');
+% save(file_name, 'lambda0', 'V0', 'W', 'line_limits');
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Run SQP relaxation
