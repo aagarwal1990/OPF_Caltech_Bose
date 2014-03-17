@@ -13,13 +13,12 @@ close all
 clc
 
 case_num = 'case14';
-use_line_limits = 1;
+use_line_limits =  1;
 [PgMax, PgMin, QgMax, QgMin, Pd, Qd, Fmax, conditionObj, costGen2, ...
- costGen1, costGen0, WMax, WMin, Phi, Psi, JJ, Ff, Tt, n, m] ...
+ costGen1, costGen0, WMax, WMin, Phi, Psi, JJ, Ff, Tt, n, m, bus, branch] ...
 = setUpOptimVar(case_num);
         
 line_limits = ones(m, 1) * 100;
-
 % Impose line limit on Branch (7,8)
 line_limits(14) = -0.995;
 % Impose line limit on Branch (7,9)
@@ -41,6 +40,7 @@ cvx_begin
     dual variables lam1 lam2 lam3 lam4 lam5 lam6 lam7 lam8;
     variable W(n, n) hermitian
     minimize sum(aux)
+%     cvx_solver sedumi
     subject to
         
         
@@ -89,13 +89,19 @@ objective_value = sum(aux) * conditionObj
 eig_lst = eig(W);
 max_eig = max(eig_lst);
 maxEigRatio = max(eig_lst(eig_lst ~= max_eig))/max_eig
+a = zeros(m, 3);
+a(:, 1) = Pf;
+a(:, 2) = branch(:, 1);
+a(:, 3) = branch(:, 2);
+a(:, 4) = 1:m;
+a;
 
 % get voltage values
 [vec, lamda] = eigs(W);
 eig_1 = lamda(1);
 R = chol(W);
 V0 = R(1, :);
-V0'
+V0';
 
 if use_line_limits == 1
     lambda0 = [lam1', lam2', lam3', lam4', lam5', lam6', lam7', lam8'];
@@ -114,7 +120,7 @@ toc
 
 objective_value
 num_iter;
-V_fin
+V_fin;
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Check if Constraints Satisfied

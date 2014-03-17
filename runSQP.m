@@ -19,7 +19,6 @@ line_limits(15) = 0.5000;
 V_k = V0';
 iter_diff = 100;
 lambda_k = lambda0;
-lambda_k = lambda0;
 count = 0;
 exp_V_k = cat(1,real(V_k), imag(V_k));
 exp_Phi = {};
@@ -50,8 +49,8 @@ end
 V_fin = ones(n, 1) * Inf;
 objective_value = ones(n, 1) * Inf;
 
-while and(iter_diff > 10^-4, count < 10)
-    count = count + 1;
+while and(iter_diff > 10^-4, count < 500)
+    count = count + 1
     
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
     % 1) Get Jacobian of Lagrangian 
@@ -114,7 +113,7 @@ while and(iter_diff > 10^-4, count < 10)
     cvx_end
     
     % Check if convergence condition met
-    iter_diff = norm(exp_V - exp_V_k); 
+    iter_diff = norm(exp_V - exp_V_k)
     
     % Update new voltage % lambda values
     exp_V_k = exp_V;
