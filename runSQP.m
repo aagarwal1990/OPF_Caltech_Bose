@@ -1,5 +1,5 @@
 function [hess_lagrangian, objective_value, V_fin, count] = ...
-         runSQP(V0, lambda0, case_num, use_line_limits)
+         runSQP(V0, lambda0, case_num, use_line_limits, line_limits)
 
 [PgMax, PgMin, QgMax, QgMin, Pd, Qd, Fmax, conditionObj, costGen2, ...
  costGen1, costGen0, WMax, WMin, Phi, Psi, JJ, Ff, Tt, n, m] ...
@@ -8,13 +8,6 @@ function [hess_lagrangian, objective_value, V_fin, count] = ...
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Run SQP 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-line_limits = ones(m, 1) * 100;
-% Impose line limit on Branch (7,8)
-line_limits(14) = -0.995;
-% Impose line limit on Branch (7,9)
-line_limits(15) = 0.5000;
-
 % Starting point for SQP
 V_k = V0';
 iter_diff = 100;
@@ -71,7 +64,7 @@ while and(iter_diff > n * 10^-4, count < 10)
     end 
     
     cvx_begin quiet
-        variables exp_V(2*n) V(n) W(n, n) obj;
+        variables exp_V(2*n) obj;
         variables Pg(n) Qg(n) Pinj(n) Qinj(n) Vsq(n) aux(n); 
         variables Pf(m) Pt(m);
         dual variables lam1 lam2 lam3 lam4 lam5 lam6 lam7 lam8;

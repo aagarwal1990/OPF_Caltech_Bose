@@ -8,9 +8,9 @@
 %
 % Requires Matpower, CVX and SeDuMi.
 
-clear all
-close all
-clc
+% clear all
+% close all
+% clc
 
 case_num = 'case14';
 use_line_limits =  1;
@@ -33,13 +33,13 @@ tic
 
 display('--------- SDP calculation ----------')
 
-cvx_begin 
+cvx_begin quiet
     variables Pg(n) Qg(n) Pinj(n) Qinj(n) Vsq(n) aux(n); 
     variables Pf(m) Pt(m);
     dual variables lam1 lam2 lam3 lam4 lam5 lam6 lam7 lam8;
     variable W(n, n) hermitian
     minimize sum(aux)
-%     cvx_solver sedumi
+    cvx_solver sedumi
     subject to
         
         
@@ -70,8 +70,8 @@ cvx_begin
         lam5 : Vsq - WMax <= 0;
         lam6 : WMin - Vsq <= 0;
         if use_line_limits == 1
-            lam7 : Pf - line_limits <= 0;
-            lam8 : -line_limits - Pt <= 0;
+            lam7 : Pf -line_limits <= 0;
+            lam8 : -Pt >= ;
         end
         
         W == hermitian_semidefinite( n );
@@ -93,14 +93,13 @@ a(:, 1) = Pf;
 a(:, 2) = branch(:, 1);
 a(:, 3) = branch(:, 2);
 a(:, 4) = 1:m;
-a;
+a
 
 % get voltage values
 [vec, lamda] = eigs(W);
 eig_1 = lamda(1);
 R = chol(W);
 V0 = R(1, :);
-V0';
 
 if use_line_limits == 1
     lambda0 = [lam1', lam2', lam3', lam4', lam5', lam6', lam7', lam8'];
@@ -108,7 +107,8 @@ else
     lambda0 = [lam1', lam2', lam3', lam4', lam5', lam6'];
 end
 
-
+% file_name = strcat(case_num, 'nonRank1_vars.mat');
+% save(file_name, 'lambda0', 'V0', 'W', 'line_limits');
 
 % %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % % Run SQP relaxation
@@ -119,7 +119,7 @@ end
 %          runSQP( V0, lambda0', case_num, use_line_limits);
 % toc
 % 
-% objective_value
+% objective_value;
 % num_iter;
 % V_fin;
 % 
