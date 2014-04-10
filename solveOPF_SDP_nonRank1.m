@@ -12,17 +12,15 @@
 % close all
 % clc
 
-case_num = 'case14';
-use_line_limits =  1;
+case_num = 'case30';
+use_line_limits =  0;
 [PgMax, PgMin, QgMax, QgMin, Pd, Qd, Fmax, conditionObj, costGen2, ...
- costGen1, costGen0, WMax, WMin, Phi, Psi, JJ, Ff, Tt, n, m, bus, branch] ...
+ costGen1, costGen0, WMax, WMin, Phi, Psi, JJ, Ff, Tt, n, m, bus, branch, mpc] ...
 = setUpOptimVar(case_num);
         
 line_limits = ones(m, 1) * 100;
-% Impose line limit on Branch (7,8)
-line_limits(14) = -0.995;
-% Impose line limit on Branch (7,9)
-line_limits(15) = 0.5000;
+% Impose line limit on Branch (2,6)
+line_limits(6) = -0.03849;
 % start time
 tic
 
@@ -109,6 +107,44 @@ end
 
 file_name = strcat(case_num, 'nonRank1_vars.mat');
 save(file_name, 'lambda0', 'V0', 'W', 'line_limits', 'objective_value_SDP');
+
+
+% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% % Run Matpower's solver
+% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% 
+% display('--------- MATPOWER optimization ----------')
+% opt = mpoption('OPF_FLOW_LIM', 1);
+% results = runopf(mpc, opt);
+% 
+% obj = results.f;
+% display(strcat('Total cost = ', num2str(obj)));
+% 
+% if strcmp(cvx_status, 'Solved') ~= 1
+%     display('Problems in optimization');
+% end
+% 
+% display('P power')
+% display([Pg, PgMax])
+% display('Q power')
+% display([Qg, 0.6*Pg])
+% display('Line flow')
+% display([-Fmax, Pt, Pf, Fmax])
+% display('Voltage')
+% display([WMin, Vsq, WMax])
+% 
+% display([mpc.branch(:,1), mpc.branch(:, 2), Pf, Pt, Fmax])
+% Pd
+% Pg
+% NF = sum(Pd);
+% 
+% if ~isnan(W)
+%     lambdas = sort(real(eig(W)), 1, 'descend');
+%     lambda123 = lambdas(1:3);
+% else
+%     lambda123 = NaN;
+% end
+
 
 % %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % % Run SQP relaxation

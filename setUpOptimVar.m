@@ -1,6 +1,6 @@
 function [PgMax, PgMin, QgMax, QgMin, Pd, Qd, Fmax, conditionObj, ...
           costGen2, costGen1, costGen0, WMax, WMin, Phi, Psi, JJ, Ff, Tt, ...
-          n, m, bus, branch] = setUpOptimVar(case_num)
+          n, m, bus, branch, mpc] = setUpOptimVar(case_num)
                                                 
 mpc = loadcase(case_num);
 n           = size(mpc.bus, 1);

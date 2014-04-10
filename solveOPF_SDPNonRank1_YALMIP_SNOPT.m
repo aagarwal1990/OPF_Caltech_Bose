@@ -7,7 +7,7 @@
 % close all
 % clc
 
-case_num = 'case39';
+case_num = 'case30';
 file_name = strcat(case_num, 'nonRank1_vars.mat');
 use_line_limits = 1;
 load(file_name);
@@ -119,5 +119,41 @@ if use_line_limits == 1
     assert(min(-line_limits - double(Pt) <= epsilon)==1)
 end
 sprintf('SNOPT - SQP: constraints satisfied with epsilon = %d', epsilon)
-    
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Run Matpower's solver
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+display('--------- MATPOWER optimization ----------')
+opt = mpoption('OPF_FLOW_LIM', 1);
+results = runopf(mpc, opt);
+
+obj = results.f;
+display(strcat('Total cost = ', num2str(obj)));
+
+if strcmp(cvx_status, 'Solved') ~= 1
+    display('Problems in optimization');
+end
+
+display('P power')
+display([Pg, PgMax])
+display('Q power')
+display([Qg, 0.6*Pg])
+display('Line flow')
+display([-Fmax, Pt, Pf, Fmax])
+display('Voltage')
+display([WMin, Vsq, WMax])
+
+display([mpc.branch(:,1), mpc.branch(:, 2), Pf, Pt, Fmax])
+Pd
+Pg
+NF = sum(Pd);
+
+if ~isnan(W)
+    lambdas = sort(real(eig(W)), 1, 'descend');
+    lambda123 = lambdas(1:3);
+else
+    lambda123 = NaN;
+end
+
 
